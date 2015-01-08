@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014 Patrick Wieschollek
+ * Copyright (c) 2014-2015 Patrick Wieschollek
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,53 +20,69 @@
  * SOFTWARE.
  */
 
-#include "ConjugateGradientSolver.h"
+#include "ConjugateGradientSolver.hpp"
+#include "stopwatch.hpp"
 #include <iostream>
 namespace pwie
 {
 
-ConjugateGradientSolver::ConjugateGradientSolver() : ISolver()
+template <typename Func>
+ConjugateGradientSolver<Func>::ConjugateGradientSolver() : ISolver<Func>()
 {
-
-
 }
 
-
-void ConjugateGradientSolver::internalSolve(Vector & x,
-        const FunctionOracleType & FunctionValue,
-        const GradientOracleType & FunctionGradient,
-        const HessianOracleType & FunctionHessian)
+template <typename Func>
+void
+ConjugateGradientSolver<Func>::internalSolve(InputType & x)
 {
-    UNUSED(FunctionHessian);
-    size_t iter = 0;
+  size_t iter = 0;
 
-    Vector grad(x.rows());
-    Vector grad_old(x.rows());
-    Vector Si(x.rows());
-    Vector Si_old(x.rows());
-    do
-    { 
-        FunctionGradient(x, grad);
+  JacobianType grad(x.rows());
+  JacobianType grad_old(x.rows());
+  JacobianType Si(x.rows());
+  JacobianType Si_old(x.rows());
+  Stopwatch<> stopwatch;
 
-        if(iter==0){
-            Si = -grad;
-        }else{
-            const double beta = grad.dot(grad)/(grad_old.dot(grad_old));
-            Si = -grad + beta*Si_old;
-        }
-        
-        const double rate = linesearch(x, Si, FunctionValue, FunctionGradient) ;
+  this->gradient(x, grad);
 
-        x = x + rate * Si;
+  while ((grad.template lpNorm<Eigen::Infinity>() > settings.gradTol) &&
+         (iter < settings.maxIter)) { 
 
-        iter++;
-        grad_old = grad;
-        Si_old = Si;
-        
+    if (iter==0){
+      Si = -grad;
+    } else {
+      double beta;
+      // fletcher-reeves
+      beta = grad.dot(grad)/(grad_old.dot(grad_old));
+      // polak ribiere
+      //beta = grad.dot(grad - grad_old)/(grad_old.dot(grad_old));
+      // hestenes-stiefel
+      //beta = -grad.dot(grad - grad_old)/Si_old.dot(grad - grad_old);
+      // dai-yuan
+      //beta = -grad.dot(grad)/Si_old.dot(grad - grad_old);
+      beta = MAX(beta, 0); // optional, direction reset
+      Si = -grad + beta*Si_old;
     }
-    while((grad.lpNorm<Eigen::Infinity>() > settings.gradTol) && (iter < settings.maxIter));
 
+    const double rate = this->linesearch(x, Si);
 
+    x = x + rate * Si;
+
+    ISolver<Func>::getXHistory().push_back(x);
+
+    iter++;
+    grad_old = grad;
+    Si_old = Si;
+
+    if (0) { 
+      stopwatch.stop();
+      std::cout << "iteration " << iter << " " << Func::f(x) 
+                << " dt=" << stopwatch.elapsed()/1e3 << std::endl;
+      stopwatch.start();
+    }
+
+    this->gradient(x, grad);
+  }
 }
 }
 

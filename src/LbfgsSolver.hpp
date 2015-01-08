@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014 Patrick Wieschollek
+ * Copyright (c) 2014-2015 Patrick Wieschollek
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,20 +22,25 @@
 
 #ifndef LBFGSSOLVER_H_
 #define LBFGSSOLVER_H_
-#include "ISolver.h"
+#include "ISolver.hpp"
 namespace pwie
 {
 
-class LbfgsSolver : public ISolver
+template <typename Func>
+class LbfgsSolver : public ISolver<Func>
 {
+    typedef typename Func::Scalar Scalar;
+    typedef typename Func::InputType InputType;
+    typedef typename Func::JacobianType JacobianType;
+    typedef typename ISolver<Func>::HessianType HessianType;
+    using ISolver<Func>::settings;
 public:
     LbfgsSolver();
-    void internalSolve(Vector & x0,
-                       const FunctionOracleType & FunctionValue,
-                       const GradientOracleType & FunctionGradient,
-                       const HessianOracleType & FunctionHessian = std::function<void(const Eigen::VectorXd & x, Eigen::MatrixXd & hessian)>());
+    void internalSolve(InputType & x0);
 };
 
 } /* namespace pwie */
+
+#include "CppNumericalSolvers/src/LbfgsSolver.cpp"
 
 #endif /* LBFGSSOLVER_H_ */

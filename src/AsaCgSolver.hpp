@@ -1,5 +1,6 @@
 /**
  * Copyright (c) 2014 Patrick Wieschollek
+ * Copyright (c) 2014 Michael Tesch
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,23 +21,29 @@
  * SOFTWARE.
  */
 
-#ifndef GRADIENTDESCENTSOLVER_H_
-#define GRADIENTDESCENTSOLVER_H_
-#include "ISolver.h"
+#ifndef ASACGSOLVER_H_
+#define ASACGSOLVER_H_
+#include "ISolver.hpp"
 namespace pwie
 {
 
-class GradientDescentSolver : public ISolver
+template <typename Func>
+class AsaCgSolver : public ISolver<Func>
 {
-public:
-    GradientDescentSolver();
-    void internalSolve(Vector & x0,
-                       const FunctionOracleType & FunctionValue,
-                       const GradientOracleType & FunctionGradient,
-                       const HessianOracleType & FunctionHessian = std::function<void(const Eigen::VectorXd & x, Eigen::MatrixXd & hessian)>());
+    typedef typename Func::Scalar Scalar;
+    typedef typename Func::InputType InputType;
+    typedef typename Func::JacobianType JacobianType;
+    typedef typename ISolver<Func>::HessianType HessianType;
 
+    InputType _upper;
+    InputType _lower;
+public:
+    AsaCgSolver();
+    void internalSolve(InputType & x0);
 };
 
 } /* namespace pwie */
 
-#endif /* GRADIENTDESCENTSOLVER_H_ */
+#include "CppNumericalSolvers/src/AsaCgSolver.cpp"
+
+#endif /* ASACGSOLVER_H_ */

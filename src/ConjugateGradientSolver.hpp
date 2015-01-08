@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014 Patrick Wieschollek
+ * Copyright (c) 2014-2015 Patrick Wieschollek
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,21 +22,26 @@
 
 #ifndef CONJUGATEGRADIENTSOLVER_H_
 #define CONJUGATEGRADIENTSOLVER_H_
-#include "ISolver.h"
+#include "ISolver.hpp"
+
 namespace pwie
 {
 
-class ConjugateGradientSolver : public ISolver
+template <typename Func>
+class ConjugateGradientSolver : public ISolver<Func>
 {
+private:
+    typedef typename Func::InputType InputType;
+    typedef typename Func::JacobianType JacobianType;
+    using ISolver<Func>::settings;
+
 public:
     ConjugateGradientSolver();
-    void internalSolve(Vector & x0,
-                       const FunctionOracleType & FunctionValue,
-                       const GradientOracleType & FunctionGradient,
-                       const HessianOracleType & FunctionHessian = std::function<void(const Eigen::VectorXd & x, Eigen::MatrixXd & hessian)>());
-
+    void internalSolve(InputType & x0);
 };
 
 } /* namespace pwie */
+
+#include "CppNumericalSolvers/src/ConjugateGradientSolver.cpp"
 
 #endif /* CONJUGATEGRADIENTSOLVER_H_ */

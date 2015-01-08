@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014 Patrick Wieschollek
+ * Copyright (c) 2014-2015 Patrick Wieschollek
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,10 +20,10 @@
  * SOFTWARE.
  */
 
-#include "LbfgsbSolver.h"
+#include "LbfgsbSolver.hpp"
 #include <iostream>
-#include <vector>
 #include <list>
+#include "stopwatch.hpp"
 
 namespace pwie
 {
@@ -41,30 +41,17 @@ std::vector<int> sort_indexes(const std::vector< std::pair<int, double> > & v)
 }
 
 
-LbfgsbSolver::LbfgsbSolver() : ISolver()
+template <typename Func>
+LbfgsbSolver<Func>::LbfgsbSolver() : ISolver<Func>()
 {
     // TODO Auto-generated constructor stub
-    hasbounds = false;
-    hasbound_lower = false;
-    hasbound_upper = false;
-
 }
 
-void LbfgsbSolver::setLowerBound(const Vector & lower)
+template <typename Func>
+void
+LbfgsbSolver<Func>::GetGeneralizedCauchyPoint(const InputType & x, JacobianType & g,
+                                              InputType & x_cauchy, VectorX & c)
 {
-    lb = lower;
-    hasbound_lower = true;
-}
-void LbfgsbSolver::setUpperBound(const Vector & upper)
-{
-    ub = upper;
-    hasbound_lower = true;
-}
-
-void LbfgsbSolver::GetGeneralizedCauchyPoint(Vector & x, Vector & g, Vector & x_cauchy,
-        Vector & c)
-{
-    const int DIM = x.rows();
     // PAGE 8
     // Algorithm CP: Computation of the generalized Cauchy point
     // Given x,l,u,g, and B = \theta I-WMW
@@ -73,10 +60,10 @@ void LbfgsbSolver::GetGeneralizedCauchyPoint(Vector & x, Vector & g, Vector & x_
     // TODO: use "std::set" ?
     std::vector<std::pair<int, double> > SetOfT;
     // the feasible set is implicitly given by "SetOfT - {t_i==0}"
-    Vector d = Vector::Zero(DIM, 1);
+    JacobianType d = JacobianType::Zero(_DIM, 1);
 
     // n operations
-    for(int j = 0; j < DIM; j++)
+    for(int j = 0; j < _DIM; j++)
     {
         if(g(j) == 0)
         {
@@ -87,18 +74,18 @@ void LbfgsbSolver::GetGeneralizedCauchyPoint(Vector & x, Vector & g, Vector & x_
             double tmp = 0;
             if(g(j) < 0)
             {
-                tmp = (x(j) - ub(j)) / g(j);
+                tmp = (x(j) - _upper(j)) / g(j);
             }
             else
             {
-                tmp = (x(j) - lb(j)) / g(j);
+                tmp = (x(j) - _lower(j)) / g(j);
             }
             d(j) = -g(j);
             SetOfT.push_back(std::make_pair(j, tmp));
         }
 
     }
-    Debug(d.transpose());
+    Debug("GGCP" << d.transpose());
 
     // paper: using heapsort
     // sortedindices [1,0,2] means the minimal element is on the 1th entry
@@ -107,9 +94,9 @@ void LbfgsbSolver::GetGeneralizedCauchyPoint(Vector & x, Vector & g, Vector & x_
     x_cauchy = x;
     // Initialize
     // p :=     W^T*p
-    Vector p = (W.transpose() * d);                     // (2mn operations)
+    VectorX p = (W.transpose() * d);                     // (2mn operations)
     // c :=     0
-    c = Eigen::MatrixXd::Zero(M.rows(), 1);
+    c = MatrixX::Zero(M.rows(), 1);
     // f' :=    g^T*d = -d^Td
     double f_prime = -d.dot(d);                         // (n operations)
     // f'' :=   \theta*d^T*d-d^T*W*M*W^T*d = -\theta*f' - p^T*M*p
@@ -120,7 +107,7 @@ void LbfgsbSolver::GetGeneralizedCauchyPoint(Vector & x, Vector & g, Vector & x_
     double t_old = 0;
     // b :=     argmin {t_i , t_i >0}
     int i = 0;
-    for(int j = 0; j < DIM; j++)
+    for(int j = 0; j < _DIM; j++)
     {
         i = j;
         if(SetOfT[SortedIndices[j]].second != 0)
@@ -134,20 +121,19 @@ void LbfgsbSolver::GetGeneralizedCauchyPoint(Vector & x, Vector & g, Vector & x_
     double dt = t - t_old;
 
     // examination of subsequent segments
-    while((dt_min >= dt) && (i < DIM))
+    while((dt_min >= dt) && (i < _DIM))
     {
         if(d(b) > 0)
-            x_cauchy(b) = ub(b);
+            x_cauchy(b) = _upper(b);
         else if(d(b) < 0)
-            x_cauchy(b) = lb(b);
+            x_cauchy(b) = _lower(b);
 
         // z_b = x_p^{cp} - x_b
         double zb = x_cauchy(b) - x(b);
         // c   :=  c +\delta t*p
         c += dt * p;
         // cache
-        Vector wbt = W.row(b);
-
+        VectorX wbt = W.row(b);
         f_prime += dt * f_doubleprime + (double) g(b) * g(b)
                    + (double) theta * g(b) * zb
                    - (double) g(b) * wbt.transpose() * (M * c);
@@ -159,7 +145,7 @@ void LbfgsbSolver::GetGeneralizedCauchyPoint(Vector & x, Vector & g, Vector & x_
         dt_min = -f_prime / f_doubleprime;
         t_old = t;
         ++i;
-        if(i < DIM)
+        if(i < _DIM)
         {
             b = SortedIndices[i];
             t = SetOfT[b].second;
@@ -168,12 +154,12 @@ void LbfgsbSolver::GetGeneralizedCauchyPoint(Vector & x, Vector & g, Vector & x_
 
     }
 
-    dt_min = max(dt_min, 0);
+    dt_min = MAX(dt_min, 0);
     t_old += dt_min;
 
     Debug(SortedIndices[0] << " " << SortedIndices[1]);
 
-    #pragma omp parallel for
+#pragma omp parallel for
     for(int ii = i; ii < x_cauchy.rows(); ii++)
     {
         x_cauchy(SortedIndices[ii]) = x(SortedIndices[ii])
@@ -183,9 +169,10 @@ void LbfgsbSolver::GetGeneralizedCauchyPoint(Vector & x, Vector & g, Vector & x_
 
     c += dt_min * p;
     Debug(c.transpose());
-
 }
-double LbfgsbSolver::FindAlpha(Vector & x_cp, Vector & du, std::vector<int> & FreeVariables)
+template <typename Func>
+double
+LbfgsbSolver<Func>::FindAlpha(const InputType & x_cp, const VectorX & du, const std::vector<int> & FreeVariables)
 {
     /* this returns
      * a* = max {a : a <= 1 and  l_i-xc_i <= a*d_i <= u_i-xc_i}
@@ -196,46 +183,25 @@ double LbfgsbSolver::FindAlpha(Vector & x_cp, Vector & du, std::vector<int> & Fr
     {
         if(du(i) > 0)
         {
-            alphastar = min(alphastar,
-                            (ub(FreeVariables[i]) - x_cp(FreeVariables[i]))
+            alphastar = MIN(alphastar,
+                            (_upper(FreeVariables[i]) - x_cp(FreeVariables[i]))
                             / du(i));
         }
         else
         {
-            alphastar = min(alphastar,
-                            (lb(FreeVariables[i]) - x_cp(FreeVariables[i]))
+            alphastar = MIN(alphastar,
+                            (_lower(FreeVariables[i]) - x_cp(FreeVariables[i]))
                             / du(i));
         }
     }
     return alphastar;
 }
 
-void LbfgsbSolver::LineSearch(Vector & x, Vector dx, double & f, Vector & g, double & t)
+template <typename Func>
+void
+LbfgsbSolver<Func>::SubspaceMinimization(InputType & x_cauchy, InputType & x, const VectorX & c,
+                                         JacobianType & g, InputType & SubspaceMin)
 {
-
-    const double alpha = 0.2;
-    const double beta = 0.8;
-
-    const double f_in = f;
-    const Vector g_in = g;
-    const double Cache = alpha * g_in.dot(dx);
-
-    t = 1.0;
-    f = FunctionObjectiveOracle_(x + t * dx);
-    while(f > f_in + t * Cache)
-    {
-        t *= beta;
-        f = FunctionObjectiveOracle_(x + t * dx);
-    }
-    FunctionGradientOracle_(x + t * dx, g);
-    x += t * dx;
-
-}
-
-void LbfgsbSolver::SubspaceMinimization(Vector & x_cauchy, Vector & x, Vector & c, Vector & g,
-                                        Vector & SubspaceMin)
-{
-
     // cached value: ThetaInverse=1/theta;
     double theta_inverse = 1 / theta;
 
@@ -246,15 +212,15 @@ void LbfgsbSolver::SubspaceMinimization(Vector & x_cauchy, Vector & x, Vector & 
     //std::cout << "free vars " << FreeVariables.rows() << std::endl;
     for(int i = 0; i < x_cauchy.rows(); i++)
     {
-        Debug(x_cauchy(i) << " " << ub(i) << " " << lb(i));
-        if((x_cauchy(i) != ub(i)) && (x_cauchy(i) != lb(i)))
+        Debug(x_cauchy(i) << " " << _upper(i) << " " << _lower(i));
+        if((x_cauchy(i) != _upper(i)) && (x_cauchy(i) != _lower(i)))
         {
             FreeVariablesIndex.push_back(i);
         }
     }
     const int FreeVarCount = FreeVariablesIndex.size();
 
-    Matrix WZ = Matrix::Zero(W.cols(), FreeVarCount);
+    MatrixX WZ = MatrixX::Zero(W.cols(), FreeVarCount);
 
     for(int i = 0; i < FreeVarCount; i++)
         WZ.col(i) = W.row(FreeVariablesIndex[i]);
@@ -265,33 +231,33 @@ void LbfgsbSolver::SubspaceMinimization(Vector & x_cauchy, Vector & x, Vector & 
     Debug(g);
     Debug(x_cauchy);
     Debug(x);
-    Vector rr = (g + theta * (x_cauchy - x) - W * (M * c));
+    InputType rr = (g + theta * (x_cauchy - x) - W * (M * c));
     // r=r(FreeVariables);
-    Vector r = Matrix::Zero(FreeVarCount, 1);
+    VectorX r = VectorX::Zero(FreeVarCount, 1);
     for(int i = 0; i < FreeVarCount; i++)
         r.row(i) = rr.row(FreeVariablesIndex[i]);
 
     Debug(r.transpose());
 
     // STEP 2: "v = w^T*Z*r" and STEP 3: "v = M*v"
-    Vector v = M * (WZ * r);
+    VectorX v = M * (WZ * r);
     // STEP 4: N = 1/theta*W^T*Z*(W^T*Z)^T
-    Matrix N = theta_inverse * WZ * WZ.transpose();
+    MatrixX N = theta_inverse * WZ * WZ.transpose();
     // N = I - MN
-    N = Matrix::Identity(N.rows(), N.rows()) - M * N;
+    N = MatrixX::Identity(N.rows(), N.rows()) - M * N;
     // STEP: 5
     // v = N^{-1}*v
     v = N.lu().solve(v);
     // STEP: 6
     // HERE IS A MISTAKE IN THE ORIGINAL PAPER!
-    Vector du = -theta_inverse * r
-                - theta_inverse * theta_inverse * WZ.transpose() * v;
+    VectorX du = -theta_inverse * r
+                  - theta_inverse * theta_inverse * WZ.transpose() * v;
     Debug(du.transpose());
     // STEP: 7
     double alpha_star = FindAlpha(x_cauchy, du, FreeVariablesIndex);
 
     // STEP: 8
-    Vector dStar = alpha_star * du;
+    VectorX dStar = alpha_star * du;
 
     SubspaceMin = x_cauchy;
     for(int i = 0; i < FreeVarCount; i++)
@@ -301,98 +267,82 @@ void LbfgsbSolver::SubspaceMinimization(Vector & x_cauchy, Vector & x, Vector & 
     }
 }
 
-void LbfgsbSolver::internalSolve(Vector & x0,
-                                 const FunctionOracleType & FunctionValue,
-                                 const GradientOracleType & FunctionGradient,
-                                 const HessianOracleType & FunctionHessian)
+template <typename Func>
+void
+LbfgsbSolver<Func>::internalSolve(InputType & x0)
 {
-    UNUSED(FunctionHessian);
-    DIM = x0.rows();
+    _DIM = x0.rows();
 
-    if(!hasbound_lower)
-    {
-        lb = (-1 * Vector::Ones(DIM)) * INF;
-        hasbound_lower = true;
-    }
-
-    if(!hasbound_upper)
-    {
-        ub = Vector::Ones(DIM) * INF;
-        hasbound_upper = true;
-    }
+    _lower = this->getLowerBound(_DIM);
+    _upper = this->getUpperBound(_DIM);
     theta = 1.0;
 
-    W = Matrix::Zero(DIM, 0);
-    M = Matrix::Zero(0, 0);
+    W = MatrixX::Zero(_DIM, 0);
+    M = MatrixX::Zero(0, 0);
 
-
-    FunctionObjectiveOracle_ = FunctionValue;
-    FunctionGradientOracle_ = FunctionGradient;
-
-    Assert(x0.rows() == lb.rows(), "lower bound size incorrect");
-    Assert(x0.rows() == ub.rows(), "upper bound size incorrect");
+    Assert(x0.rows() == _lower.rows(), "lower bound size incorrect");
+    Assert(x0.rows() == _upper.rows(), "upper bound size incorrect");
 
     Debug(x0.transpose());
-    Debug(lb.transpose());
-    Debug(ub.transpose());
+    Debug(_lower.transpose());
+    Debug(_upper.transpose());
 
-    Assert((x0.array() >= lb.array()).all(),
+    Assert((x0.array() >= _lower.array()).all(),
            "seed is not feasible (violates lower bound)");
-    Assert((x0.array() <= ub.array()).all(),
+    Assert((x0.array() <= _upper.array()).all(),
            "seed is not feasible (violates upper bound)");
 
+    ISolver<Func>::getXHistory().push_back(x0);
 
+    MatrixX yHistory = MatrixX::Zero(_DIM, 0);
+    MatrixX sHistory = MatrixX::Zero(_DIM, 0);
 
-    xHistory.push_back(x0);
-
-    Matrix yHistory = Matrix::Zero(DIM, 0);
-    Matrix sHistory = Matrix::Zero(DIM, 0);
-
-    Vector x = x0, g;
+    InputType x = x0;
+    JacobianType g(_DIM);
     size_t k = 0;
 
-    double f = FunctionObjectiveOracle_(x);
-
-    FunctionGradientOracle_(x, g);
+    double f = Func::f(x);
+    Functor<Func>::gradient(x, g);
 
     Debug(f);
     Debug(g.transpose());
 
-
-
     auto noConvergence =
-        [&](Vector & x, Vector & g)->bool
+        [&](InputType & x, JacobianType & g)->bool
     {
-        return (((x - g).cwiseMax(lb).cwiseMin(ub) - x).lpNorm<Eigen::Infinity>() >= 1e-4);
+      auto d = (x - g).cwiseMax(_lower).cwiseMin(_upper) - x;
+      return d.template lpNorm<Eigen::Infinity>() >= settings.tol;
     };
 
+    int no_improve_count = 0;
+    Stopwatch<> stopwatch;
     while(noConvergence(x, g) && (k < settings.maxIter))
     {
-
-        //std::cout << FunctionObjectiveOracle_(x) << std::endl;
-        Debug("iteration " << k)
         double f_old = f;
-        Vector x_old = x;
-        Vector g_old = g;
+        InputType x_old = x;
+        JacobianType g_old = g;
 
         // STEP 2: compute the cauchy point by algorithm CP
-        Vector CauchyPoint = Matrix::Zero(DIM, 1), c = Matrix::Zero(DIM, 1);
+        InputType CauchyPoint = MatrixX::Zero(_DIM, 1);
+        VectorX c = MatrixX::Zero(_DIM, 1);
         GetGeneralizedCauchyPoint(x, g, CauchyPoint, c);
         // STEP 3: compute a search direction d_k by the primal method
-        Vector SubspaceMin;
+        InputType SubspaceMin;
         SubspaceMinimization(CauchyPoint, x, c, g, SubspaceMin);
 
-        Matrix H;
-        double Length = 0;
+        double Length = 2;
 
         // STEP 4: perform linesearch and STEP 5: compute gradient
-        LineSearch(x, SubspaceMin - x, f, g, Length);
+        int searchstatus = ISolver<Func>::LineSearch(x, SubspaceMin - x, f, g, Length);
+        if (searchstatus < 0) {
+          return;
+        }
 
-        xHistory.push_back(x);
+        ISolver<Func>::getXHistory().push_back(x);
 
         // prepare for next iteration
-        Vector newY = g - g_old;
-        Vector newS = x - x_old;
+        JacobianType newY = g - g_old;
+        InputType newS = x - x_old;
 
         // STEP 6:
         double test = newS.dot(newY);
@@ -402,16 +352,15 @@ void LbfgsbSolver::internalSolve(Vector & x0,
         {
             if(k < settings.m)
             {
-                yHistory.conservativeResize(DIM, k + 1);
-                sHistory.conservativeResize(DIM, k + 1);
+                yHistory.conservativeResize(_DIM, k + 1);
+                sHistory.conservativeResize(_DIM, k + 1);
             }
             else
             {
-
-                yHistory.leftCols(settings.m - 1) = yHistory.rightCols(
-                                                        settings.m - 1).eval();
-                sHistory.leftCols(settings.m - 1) = sHistory.rightCols(
-                                                        settings.m - 1).eval();
+                yHistory.leftCols(settings.m - 1) = 
+                  yHistory.rightCols(settings.m - 1).eval();
+                sHistory.leftCols(settings.m - 1) = 
+                  sHistory.rightCols(settings.m - 1).eval();
             }
             yHistory.rightCols(1) = newY;
             sHistory.rightCols(1) = newS;
@@ -420,38 +369,50 @@ void LbfgsbSolver::internalSolve(Vector & x0,
             theta = (double)(newY.transpose() * newY)
                     / (newY.transpose() * newS);
 
-            W = Matrix::Zero(yHistory.rows(),
-                             yHistory.cols() + sHistory.cols());
+            W = MatrixX::Zero(yHistory.rows(),
+                              yHistory.cols() + sHistory.cols());
 
             W << yHistory, (theta * sHistory);
 
-            Matrix A = sHistory.transpose() * yHistory;
-            Matrix L = A.triangularView<Eigen::StrictlyLower>();
-            Matrix MM(A.rows() + L.rows(), A.rows() + L.cols());
-            Matrix D = -1 * A.diagonal().asDiagonal();
+            MatrixX A = sHistory.transpose() * yHistory;
+            MatrixX L = A.template triangularView<Eigen::StrictlyLower>();
+            MatrixX MM(A.rows() + L.rows(), A.rows() + L.cols());
+            MatrixX D = -1 * A.diagonal().asDiagonal();
             MM << D, L.transpose(), L, ((sHistory.transpose() * sHistory)
                                         * theta);
 
             M = MM.inverse();
+
         }
 
-        Vector ttt = Matrix::Zero(1, 1);
-        ttt(0) = f_old - f;
-        Debug("--> " << ttt.norm());
-        if(ttt.norm() < 1e-8)
+        Scalar ttt;
+        ttt = f_old - f;
+        Debug("--> " << std::abs(ttt));
+        if(std::abs(ttt) < 1e-13)
         {
             // successive function values too similar
+          if (no_improve_count++ > 10) {
+            std::cout << "no improvement, norm=" << std::abs(ttt) << "\n";
             break;
+          }
         }
+        else {
+          no_improve_count = 0;
+        }
+
         k++;
 
+        if (settings.verbosity > 0) {
+          stopwatch.stop();
+          std::cout << "iteration " << k << " " << f
+                    << " dt=" << stopwatch.elapsed()/1e3
+                    << " df=" << ttt
+                    << " step=" << Length << std::endl;
+          stopwatch.start();
+        }
     }
 
-
     x0 = x;
-
-
-
 }
 }
 

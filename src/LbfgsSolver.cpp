@@ -1,5 +1,6 @@
+
 /**
- * Copyright (c) 2014 Patrick Wieschollek
+ * Copyright (c) 2014-2015 Patrick Wieschollek
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,65 +21,63 @@
  * SOFTWARE.
  */
 
-#include "LbfgsSolver.h"
+#include "LbfgsSolver.hpp"
 #include <iostream>
 namespace pwie
 {
 
-LbfgsSolver::LbfgsSolver() : ISolver()
+template <typename Func>
+LbfgsSolver<Func>::LbfgsSolver() : ISolver<Func>()
 {
     // TODO Auto-generated constructor stub
-
 }
 
-
-void LbfgsSolver::internalSolve(Vector & x,
-                                const FunctionOracleType & FunctionValue,
-                                const GradientOracleType & FunctionGradient,
-                                const HessianOracleType & FunctionHessian)
+template <typename Func>
+void
+LbfgsSolver<Func>::internalSolve(InputType & x)
 {
-    UNUSED(FunctionHessian);
     const size_t m = 10;
     const size_t DIM = x.rows();
 
+    typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> HistMatrix;
+    HistMatrix sVector = HistMatrix::Zero(DIM, m);
+    HistMatrix yVector = HistMatrix::Zero(DIM, m);
+    HessianType H = HessianType::Identity(DIM, DIM);
 
-    Matrix sVector = Matrix::Zero(DIM, m);
-    Matrix yVector = Matrix::Zero(DIM, m);
-    Matrix H = Matrix::Identity(DIM, DIM);
-
-    Vector alpha = Vector::Zero(m);
-    Vector grad(DIM);
-    FunctionGradient(x, grad);
-    Vector x_old = x;
+    Eigen::Matrix<Scalar, Eigen::Dynamic, 1> alpha(m);
+    alpha.setZero();
+    JacobianType grad(DIM);
+    this->gradient(x, grad);
+    InputType x_old = x;
 
     size_t iter = 0;
 
     do
     {
-        Vector q = grad;
-        const int mini = min(m, iter);
+        JacobianType q = grad;
+        const int mini = MIN(m, iter);
 
         for(int i = mini - 1; i >= 0; i--)
         {
-            const double rho = 1.0 / static_cast<Vector>(sVector.col(i)).dot(static_cast<Vector>(yVector.col(i)));
-            alpha(i) = rho * static_cast<Vector>(sVector.col(i)).dot(q);
+            const double rho = 1.0 / static_cast<InputType>(sVector.col(i)).dot(static_cast<InputType>(yVector.col(i)));
+            alpha(i) = rho * static_cast<InputType>(sVector.col(i)).dot(q);
             q = q - alpha(i) * yVector.col(i);
         }
         q = H * q;
         for(int i = 0; i < mini; i++)
         {
-            const double rho = 1.0 / static_cast<Vector>(sVector.col(i)).dot(static_cast<Vector>(yVector.col(i)));
-            double beta = rho * static_cast<Vector>(yVector.col(i)).dot(q);
+            const double rho = 1.0 / static_cast<InputType>(sVector.col(i)).dot(static_cast<InputType>(yVector.col(i)));
+            double beta = rho * static_cast<InputType>(yVector.col(i)).dot(q);
             q = q + sVector.col(i) * (alpha(i) - beta);
         }
 
-        const double rate = linesearch(x, -q, FunctionValue, FunctionGradient) ;
+        const double rate = ISolver<Func>::linesearch(x, -q);
         x = x - rate * q;
-        Vector grad_old = grad;
-        FunctionGradient(x, grad);
+        JacobianType grad_old = grad;
+        this->gradient(x, grad);
 
-        Vector s = x - x_old;
-        Vector y = grad - grad_old;
+        InputType s = x - x_old;
+        JacobianType y = grad - grad_old;
 
         if(iter < m)
         {
@@ -94,16 +93,15 @@ void LbfgsSolver::internalSolve(Vector & x,
             yVector.rightCols(1) = y;
         }
 
-        H = y.dot(s) / static_cast<double>(y.dot(y)) * Matrix::Identity(DIM, DIM);
+        H = y.dot(s) / static_cast<double>(y.dot(y)) * HessianType::Identity(DIM, DIM);
         x_old = x;
 
         //std::cout << FunctionValue(x) << std::endl;
         iter++;
 
     }
-    while((grad.lpNorm<Eigen::Infinity>() > settings.gradTol) && (iter < settings.maxIter));
-
-
+    while((grad.template lpNorm<Eigen::Infinity>() > settings.gradTol) &&
+          (iter < settings.maxIter));
 
 }
 }

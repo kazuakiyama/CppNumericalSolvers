@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014 Patrick Wieschollek
+ * Copyright (c) 2014-2015 Patrick Wieschollek
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,39 +20,34 @@
  * SOFTWARE.
  */
 
-#include "GradientDescentSolver.h"
+#include "GradientDescentSolver.hpp"
 #include <iostream>
 namespace pwie
 {
 
-GradientDescentSolver::GradientDescentSolver() : ISolver()
+template <typename Func>
+GradientDescentSolver<Func>::GradientDescentSolver() : ISolver<Func>()
 {
-
-
 }
 
-
-void GradientDescentSolver::internalSolve(Vector & x,
-        const FunctionOracleType & FunctionValue,
-        const GradientOracleType & FunctionGradient,
-        const HessianOracleType & FunctionHessian)
+template <typename Func>
+void
+GradientDescentSolver<Func>::internalSolve(InputType & x)
 {
-    UNUSED(FunctionHessian);
-    Vector grad(x.rows());
+    JacobianType grad(x.rows());
 
     size_t iter = 0;
     do
     {
-        FunctionGradient(x, grad);
-        const double rate = linesearch(x, -grad, FunctionValue, FunctionGradient) ;
+        this->gradient(x, grad);
+        const double rate = this->linesearch(x, -grad) ;
 
         x = x - rate * grad;
         iter++;
     }
-    while((grad.lpNorm<Eigen::Infinity>() > settings.gradTol) && (iter < settings.maxIter));
-
-
-}
+    while((grad.template lpNorm<Eigen::Infinity>() > settings.gradTol) &&
+          (iter < settings.maxIter));
 }
 
+}
 /* namespace pwie */

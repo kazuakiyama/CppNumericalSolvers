@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014 Patrick Wieschollek
+ * Copyright (c) 2014-2015 Patrick Wieschollek
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,54 +20,52 @@
  * SOFTWARE.
  */
 
-#include "NewtonDescentSolver.h"
+#include "NewtonDescentSolver.hpp"
+#include "stopwatch.hpp"
 #include <iostream>
 #include <Eigen/LU>
 namespace pwie
 {
 
-NewtonDescentSolver::NewtonDescentSolver() : ISolver()
+template <typename Func>
+NewtonDescentSolver<Func>::NewtonDescentSolver() : ISolver<Func>()
 {
-
 }
 
-
-void NewtonDescentSolver::internalSolve(Vector & x,
-                                        const FunctionOracleType & FunctionValue,
-                                        const GradientOracleType & FunctionGradient,
-                                        const HessianOracleType & FunctionHessian)
+template <typename Func>
+void
+NewtonDescentSolver<Func>::internalSolve(InputType & x)
 {
-
-    if(!FunctionHessian)
-    {
-        std::cout << "Error: hessian matrix is missing!" << std::endl;
-        return;
-    }
-
     const size_t DIM = x.rows();
 
-    Vector grad = Vector::Zero(DIM);
-    Matrix hessian = Matrix::Zero(DIM, DIM);
+    JacobianType grad = JacobianType::Zero(DIM);
+    HessianType hessian = HessianType::Zero(DIM, DIM);
+    Stopwatch<> stopwatch;
 
-    FunctionGradient(x, grad);
-    FunctionHessian(x, hessian);
+    this->gradient(x, grad);
+    this->hessian(x, hessian);
 
     size_t iter = 0;
     do
     {
-        hessian += (1e-5) * Matrix::Identity(DIM, DIM);
-        Vector delta_x = hessian.lu().solve(-grad);
-        const double rate = linesearch(x, delta_x, FunctionValue, FunctionGradient) ;
+        hessian += (1e-5) * HessianType::Identity(DIM, DIM);
+        JacobianType delta_x = hessian.lu().solve(-grad);
+        const double rate = this->linesearch(x, delta_x);
         x = x + rate * delta_x;
 
-        FunctionGradient(x, grad);
-        FunctionHessian(x, hessian);
+        this->gradient(x, grad);
+        this->hessian(x, hessian);
 
         iter++;
+        { 
+          stopwatch.stop();
+          //std::cout << "iteration " << iter << " " << Func::f(x) 
+          //          << " dt=" << stopwatch.elapsed()/1e3 << std::endl;
+          stopwatch.start();
+        }
     }
-    while((grad.lpNorm<Eigen::Infinity>() > settings.gradTol) && (iter < settings.maxIter));
-
-
+    while((grad.template lpNorm<Eigen::Infinity>() > settings.gradTol) &&
+          (iter < settings.maxIter));
 }
 }
 

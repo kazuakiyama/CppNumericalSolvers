@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014 Patrick Wieschollek
+ * Copyright (c) 2014-2015 Patrick Wieschollek
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,8 +22,8 @@
 
 #ifndef LBFGSBSOLVER_H_
 #define LBFGSBSOLVER_H_
-#include "ISolver.h"
-#include <list>
+#include "ISolver.hpp"
+#include <vector>
 namespace pwie
 {
 
@@ -32,59 +32,51 @@ namespace pwie
  * A LIMITED MEMORY ALGORITHM FOR BOUND CONSTRAINED OPTIMIZATION
  * (Byrd, Lu, Nocedal, Zhu)
  */
-class LbfgsbSolver : public ISolver
+template <typename Func>
+class LbfgsbSolver : public ISolver<Func>
 {
-    Vector lb;
-    Vector ub;
-    std::list<Vector> xHistory;
+    typedef typename Func::Scalar Scalar;
+    typedef typename Func::InputType InputType;
+    typedef typename Func::JacobianType JacobianType;
+    typedef typename ISolver<Func>::HessianType HessianType;
+    typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixX;
+    typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> VectorX;
 
-    FunctionOracleType FunctionObjectiveOracle_;
-    GradientOracleType FunctionGradientOracle_;
-
-    Matrix W, M;
+private:
+    MatrixX W, M;
     double theta;
-    int DIM;
-    bool hasbounds = false;
-    bool hasbound_lower = false;
-    bool hasbound_upper = false;
+    InputType _upper;
+    InputType _lower;
+    int _DIM;
+public:
+    using ISolver<Func>::settings;
 private:
     /// <summary>
     /// find cauchy point in x
     /// </summary>
     /// <parameter name="x">start in x</parameter>
-    void GetGeneralizedCauchyPoint(Vector & x, Vector & g, Vector & x_cauchy, Vector & c);
+    void GetGeneralizedCauchyPoint(const InputType & x, JacobianType & g, InputType & x_cauchy, VectorX & c);
     /// <summary>
     /// find valid alpha for (8.5)
     /// </summary>
     /// <parameter name="x_cp">cauchy point</parameter>
     /// <parameter name="du">unconstrained solution of subspace minimization</parameter>
     /// <parameter name="FreeVariables">flag (1 if is free variable and 0 if is not free variable)</parameter>
-    double FindAlpha(Vector & x_cp, Vector & du, std::vector<int> & FreeVariables);
-    /// <summary>
-    /// using linesearch to determine step width
-    /// </summary>
-    /// <parameter name="x">start in x</parameter>
-    /// <parameter name="dx">direction</parameter>
-    /// <parameter name="f">current value of objective (will be changed)</parameter>
-    /// <parameter name="g">current gradient of objective (will be changed)</parameter>
-    /// <parameter name="t">step width (will be changed)</parameter>
-    void LineSearch(Vector & x, Vector dx, double & f, Vector & g, double & t) ;
+    double FindAlpha(const InputType & x_cp, const VectorX & du, const std::vector<int> & FreeVariables);
     /// <summary>
     /// direct primal approach
     /// </summary>
     /// <parameter name="x">start in x</parameter>
-    void SubspaceMinimization(Vector & x_cauchy, Vector & x, Vector & c, Vector & g, Vector & SubspaceMin);
+    void SubspaceMinimization(InputType & x_cauchy, InputType & x, const VectorX & c,
+                              JacobianType & g, InputType & SubspaceMin);
+
 public:
     LbfgsbSolver();
-    void internalSolve(Vector & x0,
-                       const FunctionOracleType & FunctionValue,
-                       const GradientOracleType & FunctionGradient,
-                       const HessianOracleType & FunctionHessian = std::function<void(const Eigen::VectorXd & x, Eigen::MatrixXd & hessian)>());
-
-    void setLowerBound(const Vector & lower);
-    void setUpperBound(const Vector & upper);
+    void internalSolve(InputType & x0);
 };
 
 } /* namespace pwie */
+
+#include "CppNumericalSolvers/src/LbfgsbSolver.cpp"
 
 #endif /* LBFGSBSOLVER_H_ */

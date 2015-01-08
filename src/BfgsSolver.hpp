@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014 Patrick Wieschollek
+ * Copyright (c) 2014-2015 Patrick Wieschollek
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,39 +20,26 @@
  * SOFTWARE.
  */
 
-#ifndef ISOLVER_H_
-#define ISOLVER_H_
-
-
-#include <functional>
-#include "Meta.h"
-
+#ifndef BFGSSOLVER_H_
+#define BFGSSOLVER_H_
+#include "ISolver.hpp"
 namespace pwie
 {
 
-
-
-class ISolver
+template <typename Func>
+class BfgsSolver : public ISolver<Func>
 {
-
+    typedef typename Func::InputType InputType;
+    typedef typename Func::JacobianType JacobianType;
+    typedef typename ISolver<Func>::HessianType HessianType;
+    using ISolver<Func>::settings;
 public:
-    Options settings;
-    ISolver();
-    virtual ~ISolver();
-
-    void solve(Vector & x0,
-               const FunctionOracleType & FunctionValue,
-               const GradientOracleType & FunctionGradient = std::function<void(const Eigen::VectorXd & x, Eigen::VectorXd & grad)>(),
-               const HessianOracleType & FunctionHessian = std::function<void(const Eigen::VectorXd & x, Eigen::MatrixXd & hessian)>());
-
-    virtual void internalSolve(Vector & x0,
-                               const FunctionOracleType & FunctionValue,
-                               const GradientOracleType & FunctionGradient,
-                               const HessianOracleType & FunctionHessian = std::function<void(const Eigen::VectorXd & x, Eigen::MatrixXd & hessian)>()) = 0;
-    double linesearch(const Vector & x, const Vector & direction, const FunctionOracleType & FunctionValue, const GradientOracleType & FunctionGradient);
-
+    BfgsSolver();
+    void internalSolve(InputType & x0);
 };
 
 } /* namespace pwie */
 
-#endif /* ISOLVER_H_ */
+#include "CppNumericalSolvers/src/BfgsSolver.cpp"
+
+#endif /* BFGSSOLVER_H_ */

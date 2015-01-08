@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014 Patrick Wieschollek
+ * Copyright (c) 2014-2015 Patrick Wieschollek
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,22 +20,26 @@
  * SOFTWARE.
  */
 
-#ifndef BFGSSOLVER_H_
-#define BFGSSOLVER_H_
-#include "ISolver.h"
+#ifndef NEWTONDESCENTSOLVER_H_
+#define NEWTONDESCENTSOLVER_H_
+#include "ISolver.hpp"
 namespace pwie
 {
 
-class BfgsSolver : public ISolver
+template <typename Func>
+class NewtonDescentSolver : public ISolver<Func>
 {
+    typedef typename Func::InputType InputType;
+    typedef typename Func::JacobianType JacobianType;
+    typedef typename Functor<Func>::HessianType HessianType;
+    using ISolver<Func>::settings;
 public:
-    BfgsSolver();
-    void internalSolve(Vector & x0,
-                       const FunctionOracleType & FunctionValue,
-                       const GradientOracleType & FunctionGradient,
-                       const HessianOracleType & FunctionHessian = std::function<void(const Eigen::VectorXd & x, Eigen::MatrixXd & hessian)>());
+    NewtonDescentSolver();
+    void internalSolve(InputType & x0);
 };
 
 } /* namespace pwie */
 
-#endif /* BFGSSOLVER_H_ */
+#include "CppNumericalSolvers/src/NewtonDescentSolver.cpp"
+
+#endif /* NEWTONDESCENTSOLVER_H_ */
