@@ -125,7 +125,7 @@ double ISolver<Func>::linesearch2(const InputType & x, const JacobianType & dire
 
   InputType xx = x + t * direction;
   double f = Func::f(xx);
-  const double f_in = Func::f(x);
+  const double f_in = f;
   JacobianType grad(x.rows());
   this->gradient(x, grad);
   const double Cache = alpha * grad.dot(direction);
@@ -139,20 +139,19 @@ double ISolver<Func>::linesearch2(const InputType & x, const JacobianType & dire
   return t;
 }
 
-double ISolver::linesearch(const Vector & x, const Vector & direction,
-                         const Eigen::MatrixXd & hessian,
-                           const FunctionOracleType & FunctionValue,
-                           const GradientOracleType & FunctionGradient)
+template <typename Func>
+double ISolver<Func>::linesearch(const InputType & x, const JacobianType & direction,
+                                 const Eigen::MatrixXd & hessian)
 {
-
     const double alpha = 0.2;
     const double beta = 0.9;
     double t = 1.0;
 
-    double f = FunctionValue(x + t * direction);
-    const double f_in = FunctionValue(x);
-    Vector grad(x.rows());
-    FunctionGradient(x, grad);
+    InputType xx = x + t * direction;
+    double f = Func::f(xx);
+    const double f_in = f;
+    JacobianType grad(x.rows());
+    this->gradient(x, grad);
     const double Cache = alpha * grad.dot(direction) + 0.5*alpha*direction.transpose()*(hessian*direction);
 
     while(f > f_in + t * Cache)

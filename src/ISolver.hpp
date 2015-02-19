@@ -98,6 +98,8 @@ protected:
 
   virtual void internalSolve(InputType & x0) = 0;
   double linesearch(const InputType & x, const JacobianType & direction);
+  double linesearch(const InputType & x, const JacobianType & direction,
+                    const Eigen::MatrixXd & hessian);
   double linesearch2(const InputType & x, const JacobianType & direction);
 
   int LineSearch(InputType & x,
