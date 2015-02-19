@@ -3,6 +3,8 @@
 *.lo
 *.o
 *.obj
+CppNumericalSolvers
+ASA_CG-3.0
 
 # Precompiled Headers
 *.gch
@@ -26,9 +28,13 @@
 *.exe
 *.out
 *.app
+main
+test
 
 # Eigen3
 /matlab-bindings/eigen
+eigen
+gtest
 
 # Matlab 
 *.m~
