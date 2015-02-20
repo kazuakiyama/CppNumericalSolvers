@@ -80,9 +80,9 @@ private:
 
 public:
 
-  Options settings;
-  ISolver();
   virtual ~ISolver();
+  ISolver();
+  template <typename T0> ISolver(const T0 & f) : Functor<Func>(f) {}
 
   void solve(InputType & x0);
   std::list<InputType> & getXHistory() { return _xHistory; }
@@ -93,6 +93,8 @@ public:
   virtual InputType getUpperBound(int DIM=Func::InputDim) const {
     return ISolver<Func>::getUpperBound(DIM, has_member_func_getUpperBound<Func>());
   };
+
+  Options settings;
 
 protected:
 

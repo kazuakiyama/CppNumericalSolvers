@@ -72,6 +72,7 @@ private:
 
 public:
     LbfgsbSolver();
+    template <typename T0> LbfgsbSolver(const T0 & f) : ISolver<Func>(f) {}
     void internalSolve(InputType & x0);
 };
 

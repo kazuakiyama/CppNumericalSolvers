@@ -37,6 +37,7 @@ private:
 
 public:
     ConjugateGradientSolver();
+    template <typename T0> ConjugateGradientSolver(const T0 & f) : ISolver<Func>(f) {}
     void internalSolve(InputType & x0);
 };
 

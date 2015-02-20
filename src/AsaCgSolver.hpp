@@ -39,6 +39,7 @@ class AsaCgSolver : public ISolver<Func>
     InputType _lower;
 public:
     AsaCgSolver();
+    template <typename T0> AsaCgSolver(const T0 & f) : ISolver<Func>(f) {}
     void internalSolve(InputType & x0);
 };
 
