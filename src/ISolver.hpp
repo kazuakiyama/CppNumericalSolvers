@@ -80,19 +80,37 @@ private:
 
 public:
 
-  virtual ~ISolver();
-  ISolver();
-  template <typename T0> ISolver(const T0 & f) : Functor<Func>(f) {}
+  ISolver() :
+    Functor<Func>(),
+    settings(),
+    _linesearch(line_search_morethuente)
+    //    _linesearch(line_search_backtracking),
+    //    _linesearch(line_search_backtracking_owlqn),
+  {
+    lbfgs_parameter_init(&_param);
+  }
 
+  template <typename T0>
+  ISolver(const T0 & f) :
+    Functor<Func>(f),
+    settings(),
+    _linesearch(line_search_morethuente)
+    //    _linesearch(line_search_backtracking),
+    //    _linesearch(line_search_backtracking_owlqn),
+  {
+    lbfgs_parameter_init(&_param);
+  }
+  virtual ~ISolver() {}
+  
   void solve(InputType & x0);
   std::list<InputType> & getXHistory() { return _xHistory; }
 
   virtual InputType getLowerBound(int DIM=Func::InputDim) const {
     return ISolver<Func>::getLowerBound(DIM, has_member_func_getLowerBound<Func>());
-  };
+  }
   virtual InputType getUpperBound(int DIM=Func::InputDim) const {
     return ISolver<Func>::getUpperBound(DIM, has_member_func_getUpperBound<Func>());
-  };
+  }
 
   Options settings;
 

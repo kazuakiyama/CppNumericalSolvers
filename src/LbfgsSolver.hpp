@@ -36,6 +36,7 @@ class LbfgsSolver : public ISolver<Func>
     using ISolver<Func>::settings;
 public:
     LbfgsSolver();
+    virtual ~LbfgsSolver() {};
     void internalSolve(InputType & x0);
 };
 

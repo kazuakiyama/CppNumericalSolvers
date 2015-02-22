@@ -46,6 +46,7 @@ protected:
 public:
   IpoptSolver() { AddRef(&_dumbPtr); }
   virtual ~IpoptSolver() { ReleaseRef(&_dumbPtr); }
+  IpoptSolver(const IpoptSolver & rhs) = delete;
 
   virtual bool get_nlp_info(Index& n, Index& m, Index& nnz_jac_g, 
                             Index& nnz_h_lag, IndexStyleEnum& index_style)

@@ -26,22 +26,6 @@ namespace pwie
 {
 
 template <typename Func>
-ISolver<Func>::ISolver()
-  : settings(),
-    _linesearch(line_search_morethuente)
-    //    _linesearch(line_search_backtracking),
-    //    _linesearch(line_search_backtracking_owlqn),
-{
-  lbfgs_parameter_init(&_param);
-}
-
-template <typename Func>
-ISolver<Func>::~ISolver()
-{
-  // TODO Auto-generated destructor stub
-}
-
-template <typename Func>
 void
 ISolver<Func>::solve(InputType & x0)
 {

@@ -70,6 +70,7 @@ class Functor : public Func {
 public:
   Functor() : Func() {}
   template <typename T0> Functor(const T0 & f) : Func(f) {}
+  virtual ~Functor() {}
 
   typedef typename Func::Scalar Scalar;
   typedef std::complex<Scalar> DualScalar; // todo: use actual dual numbers

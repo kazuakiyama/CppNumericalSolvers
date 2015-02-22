@@ -30,17 +30,18 @@ namespace pwie
 template <typename Func>
 class AsaCgSolver : public ISolver<Func>
 {
-    typedef typename Func::Scalar Scalar;
-    typedef typename Func::InputType InputType;
-    typedef typename Func::JacobianType JacobianType;
-    typedef typename ISolver<Func>::HessianType HessianType;
+  typedef typename Func::Scalar Scalar;
+  typedef typename Func::InputType InputType;
+  typedef typename Func::JacobianType JacobianType;
+  typedef typename ISolver<Func>::HessianType HessianType;
 
-    InputType _upper;
-    InputType _lower;
+  InputType _upper;
+  InputType _lower;
 public:
-    AsaCgSolver();
-    template <typename T0> AsaCgSolver(const T0 & f) : ISolver<Func>(f) {}
-    void internalSolve(InputType & x0);
+  AsaCgSolver();
+  virtual ~AsaCgSolver() {};
+  template <typename T0> AsaCgSolver(const T0 & f) : ISolver<Func>(f) {}
+  void internalSolve(InputType & x0);
 };
 
 } /* namespace pwie */
