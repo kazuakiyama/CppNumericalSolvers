@@ -104,11 +104,12 @@ AsaCgSolver<Func>::internalSolve(InputType & x0)
     asa_default (&asaParm) ;
 
     /* if you want to change parameters, change them here: */
-    //cgParm.PrintParms = TRUE ;
     cgParm.PrintLevel = 0 ;
-    asaParm.HardConstraint = TRUE ;
-    //asaParm.PrintParms = TRUE ;
+    cgParm.PrintParms = FALSE ;
     asaParm.PrintLevel = 0 ;
+    asaParm.PrintParms = FALSE ;
+    asaParm.PrintFinal = FALSE ;
+    asaParm.HardConstraint = TRUE ;
 
     /* run the code */
     Global<Functor<Func> >::get() = this;
