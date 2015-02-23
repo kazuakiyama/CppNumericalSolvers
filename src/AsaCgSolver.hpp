@@ -37,6 +37,8 @@ class AsaCgSolver : public ISolver<Func>
 
   InputType _upper;
   InputType _lower;
+  using ISolver<Func>::settings;
+
 public:
   AsaCgSolver();
   virtual ~AsaCgSolver() {};

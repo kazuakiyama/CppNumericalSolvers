@@ -41,7 +41,9 @@ typedef struct Options
 
   Options()
   {
-    gradTol = 1e-9; // when the gradient is below this, goal reached
+    // stop when the ||gradient||_inf is below this.
+    gradTol = 1e-9;
+    // 
     tol = 1e-4;
     rate = 0.00005;
     maxIter = 100000;
@@ -57,6 +59,7 @@ class ISolver : public Functor<Func>
 {
 private:
 
+  typedef typename Func::Scalar Scalar;
   typedef typename Func::InputType InputType;
   typedef typename Func::JacobianType JacobianType;
 
@@ -77,6 +80,20 @@ private:
   }
   CREATE_MEMBER_FUNC_SIG_CHECK(getLowerBound, InputType (T::*)(int DIM) const, getLowerBound);
   CREATE_MEMBER_FUNC_SIG_CHECK(getUpperBound, InputType (T::*)(int DIM) const, getUpperBound);
+
+  // default step function does nothing
+  inline bool intermediateStep(int iter, InputType & x, Scalar & step, InputType & dir, JacobianType & grad,
+                               std::false_type) const {
+    return true;
+  }
+  inline bool intermediateStep(int iter, InputType & x, Scalar & step, InputType & dir, JacobianType & grad,
+                               std::true_type) const {
+    return Func::intermediateStep(x, step, dir, grad);
+  }
+  CREATE_MEMBER_FUNC_SIG_CHECK(intermediateStep,
+                               bool (T::*)(int iter, InputType & x, Scalar & step,
+                                           InputType & dir, JacobianType & grad) const,
+                               intermediateStep);
 
 public:
 
@@ -105,11 +122,19 @@ public:
   void solve(InputType & x0);
   std::list<InputType> & getXHistory() { return _xHistory; }
 
-  virtual InputType getLowerBound(int DIM=Func::InputDim) const {
+  virtual InputType getLowerBound(int DIM=Func::InputDim) const
+  {
     return ISolver<Func>::getLowerBound(DIM, has_member_func_getLowerBound<Func>());
   }
-  virtual InputType getUpperBound(int DIM=Func::InputDim) const {
+  virtual InputType getUpperBound(int DIM=Func::InputDim) const
+  {
     return ISolver<Func>::getUpperBound(DIM, has_member_func_getUpperBound<Func>());
+  }
+  virtual bool intermediateStep(int iter, InputType & x, Scalar & step,
+                                InputType & dir, JacobianType & grad) const
+  {
+    return ISolver<Func>::intermediateStep(iter, x, step, dir, grad,
+                                           has_member_func_intermediateStep<Func>());
   }
 
   Options settings;
@@ -127,7 +152,9 @@ protected:
                  double & f,
                  JacobianType & g,
                  double & step);
+
 private:
+
   line_search_proc _linesearch;
   static lbfgsfloatval_t lbfgs_evaluate(void *instance,
                                         const lbfgsfloatval_t *x,

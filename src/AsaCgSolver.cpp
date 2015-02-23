@@ -104,17 +104,21 @@ AsaCgSolver<Func>::internalSolve(InputType & x0)
     asa_default (&asaParm) ;
 
     /* if you want to change parameters, change them here: */
-    cgParm.PrintLevel = 0 ;
+    cgParm.PrintLevel = 1 ;
     cgParm.PrintParms = FALSE ;
+    cgParm.maxit = settings.maxIter ;
     asaParm.PrintLevel = 0 ;
-    asaParm.PrintParms = FALSE ;
-    asaParm.PrintFinal = FALSE ;
+    asaParm.PrintParms = TRUE ;
+    asaParm.PrintFinal = TRUE ;
     asaParm.HardConstraint = TRUE ;
 
     /* run the code */
     Global<Functor<Func> >::get() = this;
-    asa_cg(x, lo, hi, DIM, NULL, &cgParm, &asaParm, 1.e-9,
-           &myvalue<Functor<Func> >, &mygrad<Functor<Func> >, &myvalgrad<Functor<Func> >,
+    asa_cg(x, lo, hi, DIM, NULL, &cgParm, &asaParm,
+           settings.gradTol, /* grad_tol */
+           &myvalue<Functor<Func> >,
+           &mygrad<Functor<Func> >,
+           &myvalgrad<Functor<Func> >,
            NULL, NULL);
 
     // x0 = x;
