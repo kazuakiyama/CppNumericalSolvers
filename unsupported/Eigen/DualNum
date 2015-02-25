@@ -63,101 +63,16 @@ namespace Eigen {
 
 }
 
-namespace Eigen {
-
-/* dual-numbers implementation for calculation of differentials */
-template <class eT>
-class DualNum {
-private:
-  eT _re, _du;
-
-public:
-  inline DualNum() : _re(), _du() {}
-  inline DualNum(const eT & re, const eT & du = eT()) : _re(re), _du(du) {}
-
-  inline eT real() const { return _re; }
-  inline eT dual() const { return _du; }
-
-  template <class eeT> friend std::ostream & operator<<(std::ostream & output, const DualNum<eeT> & rhs);
-  template <class eeT> friend eeT real(const DualNum<eeT> & d) { return d.real(); }
-  template <class eeT> friend eeT dual(const DualNum<eeT> & d) { return d.dual(); }
-
-  // basic ops
-  DualNum<eT> operator+() const { return *this; };
-  DualNum<eT> operator+(const DualNum<eT> rhs) const { return DualNum<eT>(_re+rhs._re, _du+rhs._du); }
-  template <class eeT>
-  friend DualNum<eeT> operator+(const eeT lhs, const DualNum<eeT> rhs);
-  DualNum<eT> operator-() const;
-  DualNum<eT> operator-(const DualNum<eT> rhs) const;
-  template <class eeT>
-  friend DualNum<eeT> operator-(const eeT lhs, const DualNum<eeT> rhs);
-  DualNum<eT> operator*(const DualNum<eT> rhs) const;
-  template <class eeT>
-  friend DualNum<eeT> operator*(const eeT lhs, const DualNum<eeT> rhs);
-  template <class eeT>
-  friend DualNum<eeT> operator/(const DualNum<eeT> lhs, const DualNum<eeT> rhs);
-  template <class eeT>
-  friend DualNum<eeT> operator/(const eeT lhs, const DualNum<eeT> rhs);
-  template <class eeT>
-  friend DualNum<eeT> operator/(const DualNum<eeT> lhs, const eeT rhs);
-  DualNum<eT> & operator+=(DualNum<eT> rhs) {_re += rhs._re; _du += rhs._du; return *this; }
-  DualNum<eT> & operator-=(DualNum<eT> rhs);
-  DualNum<eT> & operator*=(DualNum<eT> rhs);
-  DualNum<eT> & operator*=(eT rhs);
-  DualNum<eT> & operator/=(eT rhs);
-
-  // math.h functions
-  template <class eeT> friend DualNum<eeT> pow(DualNum<eeT> x, eeT a);
-  template <class eeT> friend DualNum<eeT> pow(DualNum<eeT> x, DualNum<eeT> a);
-  template <class eeT> friend DualNum<eeT> exp(DualNum<eeT> x);
-  template <class eeT> friend DualNum<eeT> log(DualNum<eeT> x);
-  template <class eeT> friend DualNum<eeT> sin(DualNum<eeT> a);
-  template <class eeT> friend DualNum<eeT> cos(DualNum<eeT> a);
-  template <class eeT> friend DualNum<eeT> tan(DualNum<eeT> a);
-  template <class eeT> friend DualNum<eeT> asin(DualNum<eeT> x);
-  template <class eeT> friend DualNum<eeT> acos(DualNum<eeT> x);
-  template <class eeT> friend DualNum<eeT> atan(DualNum<eeT> x);
-  template <class eeT> friend DualNum<eeT> atan2(DualNum<eeT> y, DualNum<eeT> x);
-  template <class eeT> friend DualNum<eeT> sqrt(DualNum<eeT> x);
-  template <class eeT> friend DualNum<eeT> max(DualNum<eeT> x1, DualNum<eeT> x2);
-  template <class eeT> friend DualNum<eeT> max(DualNum<eeT> x1, eeT x2);
-  template <class eeT> friend DualNum<eeT> max(eeT x1, DualNum<eeT> x2);
-  template <class eeT> friend DualNum<eeT> min(DualNum<eeT> x1, DualNum<eeT> x2);
-  template <class eeT> friend DualNum<eeT> min(DualNum<eeT> x1, eeT x2);
-  template <class eeT> friend DualNum<eeT> min(eeT x1, DualNum<eeT> x2);
-  template <class eeT> friend DualNum<eeT> conj(const DualNum<eeT> & x) { return x; }
-  //template <class eeT> friend DualNum<eeT> real(const DualNum<eeT> & x) { return x.real(); }
-  template <class eeT> friend DualNum<eeT> imag(const DualNum<eeT> & x) { return DualNum<eeT>(0.0,0.0); }
-  template <class eeT> friend DualNum<eeT> abs(const DualNum<eeT> & x) { return fabs(x._re); }
-  template <class eeT> friend DualNum<eeT> abs2(const DualNum<eeT> & x) { return x * x; }
-
-  // comparison
-  template <class eeT> friend bool operator>(DualNum<eeT> lhs, DualNum<eeT> rhs);
-  template <class eeT> friend bool operator>(eeT lhs, DualNum<eeT> rhs);
-  template <class eeT> friend bool operator>(DualNum<eeT> lhs, eeT rhs);
-  template <class eeT> friend bool operator>=(DualNum<eeT> lhs, DualNum<eeT> rhs);
-  template <class eeT> friend bool operator>=(eeT lhs, DualNum<eeT> rhs);
-  template <class eeT> friend bool operator>=(DualNum<eeT> lhs, eeT rhs);
-  template <class eeT> friend bool operator<(DualNum<eeT> lhs, DualNum<eeT> rhs);
-  template <class eeT> friend bool operator<(eeT lhs, DualNum<eeT> rhs);
-  template <class eeT> friend bool operator<(DualNum<eeT> lhs, eeT rhs);
-  template <class eeT> friend bool operator<=(DualNum<eeT> lhs, DualNum<eeT> rhs);
-  template <class eeT> friend bool operator<=(eeT lhs, DualNum<eeT> rhs);
-  template <class eeT> friend bool operator<=(DualNum<eeT> lhs, eeT rhs);
-  template <class eeT> friend bool operator==(DualNum<eeT> lhs, DualNum<eeT> rhs);
-  template <class eeT> friend bool operator==(eeT lhs, DualNum<eeT> rhs);
-  template <class eeT> friend bool operator==(DualNum<eeT> lhs, eeT rhs);
-  template <class eeT> friend bool operator!=(DualNum<eeT> lhs, DualNum<eeT> rhs);
-  template <class eeT> friend bool operator!=(eeT lhs, DualNum<eeT> rhs);
-  template <class eeT> friend bool operator!=(DualNum<eeT> lhs, eeT rhs);
-};
-
-}
-
 #include "src/DualNum/DualNum.h"
-#include "src/DualNum/HyperDual.h"
+//#include "src/DualNum/HyperDual.h"
 
 namespace Eigen {
+
+typedef DualNum<float> Dualf;
+typedef DualNum<double> Duald;
+//typedef DualNum<std::complex<float> > Dualcf;
+//typedef DualNum<std::complex<double> > Dualcd;
+
 //@}
 }
 

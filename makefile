@@ -19,6 +19,9 @@ main: src/main.cpp $(DEPS) src/lbfgs.o  $(ASA_VER)/asa_cg.o
 test: src/unittests.cpp $(DEPS) src/lbfgs.o $(ASA_VER)/asa_cg.o 
 	$(CXX) $(CXXFLAGSTEST) -o test src/unittests.cpp libgtest.a -lpthread src/lbfgs.o $(ASA_VER)/asa_cg.o 
 
+testdual: src/testdual.cpp unsupported/Eigen/* unsupported/Eigen/src/*
+	$(CXX) $(CXXFLAGSTEST) -o testdual src/testdual.cpp libgtest.a -lpthread
+
 clean:
 	rm main test $(ASA_VER)/asa_cg.o src/lbfgs.o
 
