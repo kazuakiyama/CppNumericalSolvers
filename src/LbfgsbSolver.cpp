@@ -330,10 +330,10 @@ LbfgsbSolver<Func>::internalSolve(InputType & x0)
         InputType SubspaceMin;
         SubspaceMinimization(CauchyPoint, x, c, g, SubspaceMin);
 
-        double Length = 2;
+        double step = 2;
 
         // STEP 4: perform linesearch and STEP 5: compute gradient
-        int searchstatus = ISolver<Func>::LineSearch(x, SubspaceMin - x, f, g, Length);
+        int searchstatus = ISolver<Func>::LineSearch(x, SubspaceMin - x, f, g, step);
         if (searchstatus < 0) {
           return;
         }
@@ -402,12 +402,15 @@ LbfgsbSolver<Func>::internalSolve(InputType & x0)
 
         k++;
 
+        InputType dir = SubspaceMin - x;
+        this->checkConverged(k, x, step, dir, g);
+
         if (settings.verbosity > 0) {
           stopwatch.stop();
           std::cout << "iteration " << k << " " << f
                     << " dt=" << stopwatch.elapsed()/1e3
                     << " df=" << ttt
-                    << " step=" << Length << std::endl;
+                    << " step=" << step << std::endl;
           stopwatch.start();
         }
     }

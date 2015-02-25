@@ -82,18 +82,23 @@ private:
   CREATE_MEMBER_FUNC_SIG_CHECK(getUpperBound, InputType (T::*)(int DIM) const, getUpperBound);
 
   // default step function does nothing
-  inline bool intermediateStep(int iter, InputType & x, Scalar & step, InputType & dir, JacobianType & grad,
-                               std::false_type) const {
-    return true;
+  inline bool checkConverged(size_t iter, InputType & x, Scalar & step, InputType & dir,
+                             JacobianType & g, std::false_type) const {
+    (void)x;
+    (void)step;
+    (void)dir;
+    if (iter >= settings.maxIter)
+      return true;
+    return g.template lpNorm<Eigen::Infinity>() < settings.tol;
   }
-  inline bool intermediateStep(int iter, InputType & x, Scalar & step, InputType & dir, JacobianType & grad,
-                               std::true_type) const {
-    return Func::intermediateStep(x, step, dir, grad);
+  inline bool checkConverged(int iter, InputType & x, Scalar & step, InputType & dir,
+                             JacobianType & g, std::true_type) const {
+    return Func::checkConverged(x, step, dir, g);
   }
-  CREATE_MEMBER_FUNC_SIG_CHECK(intermediateStep,
+  CREATE_MEMBER_FUNC_SIG_CHECK(checkConverged,
                                bool (T::*)(int iter, InputType & x, Scalar & step,
                                            InputType & dir, JacobianType & grad) const,
-                               intermediateStep);
+                               checkConverged);
 
 public:
 
@@ -130,11 +135,11 @@ public:
   {
     return ISolver<Func>::getUpperBound(DIM, has_member_func_getUpperBound<Func>());
   }
-  virtual bool intermediateStep(int iter, InputType & x, Scalar & step,
-                                InputType & dir, JacobianType & grad) const
+  virtual bool checkConverged(int iter, InputType & x, Scalar & step,
+                              InputType & dir, JacobianType & grad) const
   {
-    return ISolver<Func>::intermediateStep(iter, x, step, dir, grad,
-                                           has_member_func_intermediateStep<Func>());
+    return ISolver<Func>::checkConverged(iter, x, step, dir, grad,
+                                         has_member_func_checkConverged<Func>());
   }
 
   Options settings;

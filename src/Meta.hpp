@@ -54,7 +54,6 @@ template<typename T, T>
 struct sig_check : std::true_type {};
 
 #define CREATE_MEMBER_FUNC_SIG_CHECK(func_name, func_sig, templ_postfix)    \
-                                                                            \
 template<typename T, typename = std::true_type>                             \
 struct has_member_func_##templ_postfix : std::false_type {};                \
 template<typename T>                                                        \
@@ -68,10 +67,6 @@ struct has_member_func_##templ_postfix<                                     \
 template<typename Func>
 class Functor : public Func {
 public:
-  Functor() : Func() {}
-  template <typename T0> Functor(const T0 & f) : Func(f) {}
-  virtual ~Functor() {}
-
   typedef typename Func::Scalar Scalar;
   typedef std::complex<Scalar> DualScalar; // todo: use actual dual numbers
   enum {
@@ -82,6 +77,17 @@ public:
   typedef Eigen::Matrix<DualScalar,InputDim,1> DualInputType;
   typedef typename Func::JacobianType JacobianType;
   typedef Eigen::Matrix<Scalar,InputDim,InputDim> HessianType; // tensor by ValueDim
+
+  //
+  // Constructors / Destructors
+  //
+  Functor() : Func() {
+    EIGEN_STATIC_ASSERT_VECTOR_ONLY(InputType);
+    EIGEN_STATIC_ASSERT_VECTOR_ONLY(JacobianType);
+    EIGEN_STATIC_ASSERT_SAME_VECTOR_SIZE(InputType,JacobianType);
+  }
+  template <typename T0> Functor(const T0 & f) : Func(f) {}
+  virtual ~Functor() {}
 
   // evaluate function f(x)->v
   //ValueType operator() (const InputType & x) const { return Func::template f <Scalar> (x); }
@@ -128,13 +134,17 @@ public:
   void gradientDual(const InputType & x, JacobianType & grad) const {
     double eps = 1e-11;
     const size_t DIM = x.rows();
-    DualInputType xx = x.template cast<DualScalar>();
     JacobianType gg(DIM);
-    for (size_t i = 0; i < DIM; i++) {
-      xx[i] += DualScalar(0, eps);
-      //grad[i] = imag(Func::template operator() <DualScalar>(xx)) / eps;
-      gg[i] = imag(Func::f(xx)) / eps;
-      xx[i] = x[i];
+#pragma omp parallel
+    {
+      DualInputType xx = x.template cast<DualScalar>();
+#pragma omp for
+      for (size_t i = 0; i < DIM; i++) {
+        xx[i] += DualScalar(0, eps);
+        //grad[i] = imag(Func::template operator() <DualScalar>(xx)) / eps;
+        gg[i] = imag(Func::f(xx)) / eps;
+        xx[i] = x[i];
+      }
     }
     grad = gg;
   }
@@ -143,15 +153,18 @@ public:
   void gradientFiniteDiff(const InputType & x, JacobianType & grad, double eps = 1e-8) const {
     const size_t DIM = x.rows();
     typename Func::JacobianType finite(DIM);
-    typename Func::InputType xx = x;
-    typename Func::InputType xy = x;
-    for(size_t i = 0; i < DIM; i++)
+#pragma omp parallel
     {
+      typename Func::InputType xx = x;
+      typename Func::InputType xy = x;
+#pragma omp for
+      for(size_t i = 0; i < DIM; i++) {
         xx[i] += eps;
         xy[i] -= eps;
         finite[i] = (Func::f(xx) - Func::f(xy)) / (2.0 * eps);
         xx[i] = x[i];
         xy[i] = x[i];
+      }
     }
     grad = finite;
   }
@@ -188,22 +201,22 @@ const double INF = HUGE_VAL;
 template<typename T>
 bool AssertSimiliar(T a, T b)
 {
-    return fabs(a - b) <=  1e-2;
+  return fabs(a - b) <=  1e-2;
 }
 template<typename T>
 bool AssertGreaterThan(T a, T b)
 {
-    return (a - b) > ((fabs(a) < fabs(b) ? fabs(b) : fabs(a)) * 1e-3);
+  return (a - b) > ((fabs(a) < fabs(b) ? fabs(b) : fabs(a)) * 1e-3);
 }
 template<typename T>
 bool AssertLessThan(T a, T b)
 {
-    return (b - a) > ((fabs(a) < fabs(b) ? fabs(b) : fabs(a)) * 1e-3);
+  return (b - a) > ((fabs(a) < fabs(b) ? fabs(b) : fabs(a)) * 1e-3);
 }
 template<typename T>
 bool AssertEqual(T a, T b)
 {
-    return (a == b);
+  return (a == b);
 }
 }
 
