@@ -11,7 +11,7 @@ CXXFLAGS := -O0 -g -Wall -Wextra -pedantic-errors -std=c++11 $(INCLUDE) #-fopenm
 CXXFLAGSTEST := -g -Wall -Wextra -pedantic-errors -std=c++11 $(INCLUDE) -Igtest-1.7.0/include #-fopenmp 
 DEPS := src/*.h src/*.cpp
 
-.PHONY: main test
+.PHONY: main test testdual
 
 main: src/main.cpp $(DEPS) src/lbfgs.o  $(ASA_VER)/asa_cg.o 
 	$(CXX) $(CXXFLAGS) -o main src/main.cpp  src/lbfgs.o $(ASA_VER)/asa_cg.o $(IPOPT_LIBS)

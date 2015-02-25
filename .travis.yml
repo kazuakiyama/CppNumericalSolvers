@@ -17,5 +17,7 @@ install:
 script: 
   - make test
   - make main
+  - make testdual
   - ./test
+  - ./testdual
   - ./main

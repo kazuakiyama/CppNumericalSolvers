@@ -70,8 +70,8 @@ namespace Eigen {
 
 typedef DualNum<float> Dualf;
 typedef DualNum<double> Duald;
-//typedef DualNum<std::complex<float> > Dualcf;
-//typedef DualNum<std::complex<double> > Dualcd;
+typedef DualNum<std::complex<float> > Dualcf;
+typedef DualNum<std::complex<double> > Dualcd;
 
 //@}
 }

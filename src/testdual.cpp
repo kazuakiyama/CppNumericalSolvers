@@ -100,13 +100,27 @@ void compare()
   EXPECT_EQ(-abs(h), (Scalar)-2.2);
 }
 
-TEST (DualNum, Comparison)
+TEST (Duald, Comparison)
 {
   compare<Duald>();
+}
+
+TEST (Dualf, Comparison)
+{
   compare<Dualf>();
 }
 
-TEST (DualNum, Transcendental)
+TEST (Dualcd, Comparison)
+{
+  compare<Dualcd>();
+}
+
+TEST (Dualcf, Comparison)
+{
+  compare<Dualcf>();
+}
+
+TEST (Duald, Transcendental)
 {
   
 }
