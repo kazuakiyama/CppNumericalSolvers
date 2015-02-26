@@ -22,28 +22,28 @@ TEST (DualTest, Construct)
   DualNum<double> x = 1.1;
   EXPECT_EQ(x.realpart(), 1.1);
   EXPECT_EQ(realpart(x), 1.1);
-  EXPECT_EQ(x.ipart(), 0.0);
-  EXPECT_EQ(ipart(x), 0.0);
+  EXPECT_EQ(x.epart(), 0.0);
+  EXPECT_EQ(epart(x), 0.0);
 
   DualNum<double> z(1.1);
   EXPECT_EQ(z.realpart(), 1.1);
   EXPECT_EQ(realpart(z), 1.1);
-  EXPECT_EQ(z.ipart(), 0.0);
-  EXPECT_EQ(ipart(z), 0.0);
+  EXPECT_EQ(z.epart(), 0.0);
+  EXPECT_EQ(epart(z), 0.0);
 
   DualNum<double> y(1.1, 2.2);
   EXPECT_EQ(y.realpart(), 1.1);
   EXPECT_EQ(realpart(y), 1.1);
-  EXPECT_EQ(y.ipart(), 2.2);
-  EXPECT_EQ(ipart(y), 2.2);
+  EXPECT_EQ(y.epart(), 2.2);
+  EXPECT_EQ(epart(y), 2.2);
 
   DualNum<double> w = {1.1, 2.2};
   EXPECT_EQ(w.realpart(), 1.1);
-  EXPECT_EQ(w.ipart(), 2.2);
+  EXPECT_EQ(w.epart(), 2.2);
 
   DualNum<double> a{1.1, 2.2};
   EXPECT_EQ(a.realpart(), 1.1);
-  EXPECT_EQ(a.ipart(), 2.2);
+  EXPECT_EQ(a.epart(), 2.2);
 }
 
 template <typename DUALTYPE, typename Scalar>
