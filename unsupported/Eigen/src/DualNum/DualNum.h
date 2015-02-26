@@ -12,7 +12,7 @@
 #define EIGEN_DUALNUM_H
 
 #include <cmath>
-#include <cxxduals/dual>
+#include "dual"
 
 namespace Eigen {
 

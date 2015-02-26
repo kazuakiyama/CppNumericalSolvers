@@ -34,11 +34,24 @@
 //#include <ext/type_traits.h>
 #include <cmath>
 #include <sstream>
+//#include <complex>
 
 /* dual-numbers implementation for calculation of differentials */
 
 namespace cxxduals {
 
+// forward declaration
+template <typename _Tp> class dual;
+
+// useful typedefs
+#ifndef CXXDUALS_NO_TYPEDEFS
+typedef dual<double> duald;
+typedef dual<float> dualf;
+//typedef dual<std::complex<double> > dualcd;
+//typedef dual<std::complex<float> > dualcf;
+#endif
+
+// dual number class
 template <typename _Tp>
 class dual {
 
@@ -564,18 +577,18 @@ operator!=(dual<eeT> lhs, eeT rhs)
   return lhs.realpart() != rhs;
 }
 
-} // namespace duals
-
 template<typename _Tp, typename _CharT, class _Traits>
-basic_ostream<_CharT, _Traits>&
-operator<<(basic_ostream<_CharT, _Traits>& __os, const dual<_Tp>& rhs)
+std::basic_ostream<_CharT, _Traits>&
+operator<<(std::basic_ostream<_CharT, _Traits>& __os, const dual<_Tp>& rhs)
 {
-  basic_ostringstream<_CharT, _Traits> __s;
+  std::basic_ostringstream<_CharT, _Traits> __s;
   __s.flags(__os.flags());
   __s.imbue(__os.getloc());
   __s.precision(__os.precision());
-  __s << << "(" << rhs.realpart() << " + e*" << rhs.epart() << ")";
+  __s << "(" << rhs.realpart() << " + e*" << rhs.epart() << ")";
   return __os << __s.str();
 }
+
+} // namespace duals
 
 #endif // LIB_DUAL
