@@ -54,8 +54,9 @@ void equality()
   DUALTYPE f{1.1, 2.21};
   DUALTYPE g{2.2, 2.21};
   DUALTYPE h{-2.2, -2.21};
-  DUALTYPE j{3, 0};
+  DUALTYPE j{3, 1};
   DUALTYPE k{9, 6};
+  DUALTYPE l{9, 1};
   Matrix<DUALTYPE,1,1> a;
   a << d;
   EXPECT_EQ(a[0], d);
@@ -67,8 +68,9 @@ void equality()
   EXPECT_NE((Scalar)1.2, f);
   EXPECT_EQ(a[0], (Scalar)1.1);
   EXPECT_EQ((Scalar)1.1, a[0]);
+  EXPECT_EQ(j*j, k);
   EXPECT_EQ(pow(j,(Scalar)2.0), k);
-  EXPECT_EQ(sqrt(k), j);
+  EXPECT_EQ(sqrt(l), j);
   EXPECT_EQ(abs(h), g);
   EXPECT_EQ(abs(-h), g);
   EXPECT_EQ(-abs(h), h);
@@ -87,8 +89,10 @@ void compare()
   DUALTYPE h{-2.2, -2.21};
   DUALTYPE j{3, 0};
   DUALTYPE k{9, 6};
+  DUALTYPE l{9, 1};
   Matrix<DUALTYPE,1,1> a;
   a << d;
+  EXPECT_NEAR(epart(sqrt(l)), (Scalar)(0.5*pow(9,-0.5)), (Scalar)1e-15);
   EXPECT_GT((Scalar)1.2, a[0]);
   EXPECT_GT(a[0],(Scalar)1.0);
   EXPECT_GT(g,f);
@@ -157,5 +161,7 @@ TEST (Duald, Transcendental)
 int main(int argc, char **argv)
 {
   ::testing::InitGoogleTest(&argc, argv);
+  std::cout.precision(20);
+  std::cerr.precision(20);
   return RUN_ALL_TESTS();
 }
