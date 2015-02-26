@@ -37,7 +37,7 @@
 
 /* dual-numbers implementation for calculation of differentials */
 
-namespace duals {
+namespace cxxduals {
 
 template <typename _Tp>
 class dual {

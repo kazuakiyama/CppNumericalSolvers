@@ -12,12 +12,12 @@
 #define EIGEN_DUALNUM_H
 
 #include <cmath>
-#include "dual"
+#include <cxxduals/dual>
 
 namespace Eigen {
 
-using namespace duals;
-template <class eT> using DualNum = duals::dual<eT>;
+using namespace cxxduals;
+template <class eT> using DualNum = cxxduals::dual<eT>;
 
 } // namespace Eigen
 
