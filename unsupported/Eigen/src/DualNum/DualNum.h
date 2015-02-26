@@ -34,70 +34,80 @@
 namespace Eigen {
 
 /* dual-numbers implementation for calculation of differentials */
-template <class eT>
+template <class _Tp>
 class DualNum {
 private:
-  eT _f0, _f1;
+  _Tp _f0, _f1;
 public:
-  typedef eT Scalar;
+  typedef _Tp value_type;
 
   inline DualNum() : _f0(), _f1() {}
-  inline DualNum(const eT & re) : _f0(re), _f1(0) {}
-  inline DualNum(const eT & re, const eT & du) : _f0(re), _f1(du) {}
+  inline DualNum(const _Tp & re) : _f0(re), _f1() {}
+  inline DualNum(const _Tp & re, const _Tp & du) : _f0(re), _f1(du) {}
 
-  inline eT real() const { return _f0; }
-  inline eT dual() const { return _f1; }
-
-  template <class eeT> friend std::ostream & operator<<(std::ostream & output, const DualNum<eeT> & rhs);
-  template <class eeT> friend eeT real(const DualNum<eeT> & d);
-  template <class eeT> friend eeT dual(const DualNum<eeT> & d);
+  inline _Tp realpart() const { return _f0; }
+  inline _Tp ipart() const { return _f1; }
 
   // basic ops
-  DualNum<eT> operator+() const {
+  DualNum<_Tp> operator+() const {
     return *this;
-  };
-  DualNum<eT> operator+(const DualNum<eT> rhs) const {
-    return DualNum<eT>(_f0 + rhs._f0, _f1 + rhs._f1);
   }
-  template <class eeT>
-  friend DualNum<eeT> operator+(const eeT lhs, const DualNum<eeT> rhs);
-  DualNum<eT> operator-() const {
-    return DualNum<eT>(-_f0, -_f1);
+
+  DualNum<_Tp> operator+(const DualNum<_Tp> rhs) const {
+    return DualNum<_Tp>(_f0 + rhs._f0, _f1 + rhs._f1);
   }
-  DualNum<eT> operator-(const DualNum<eT> rhs) const {
-    return DualNum<eT>(_f0 - rhs._f0, _f1 - rhs._f1);
+
+  DualNum<_Tp> operator-(const DualNum<_Tp> rhs) const {
+    return DualNum<_Tp>(_f0 - rhs._f0, _f1 - rhs._f1);
   }
-  template <class eeT>
-  friend DualNum<eeT> operator-(const eeT lhs, const DualNum<eeT> rhs);
-  DualNum<eT> operator*(const DualNum<eT> rhs) const {
-    return DualNum<eT>(_f0 * rhs._f0, _f0 * rhs._f1 + _f1 * rhs._f0);
+
+  DualNum<_Tp> operator-() const {
+    return DualNum<_Tp>(-_f0, -_f1);
   }
-  template <class eeT> friend DualNum<eeT> operator*(const eeT lhs, const DualNum<eeT> rhs);
-  template <class eeT> friend DualNum<eeT> operator/(const DualNum<eeT> lhs, const DualNum<eeT> rhs);
-  template <class eeT> friend DualNum<eeT> operator/(const eeT lhs, const DualNum<eeT> rhs);
-  template <class eeT> friend DualNum<eeT> operator/(const DualNum<eeT> lhs, const eeT rhs);
-  DualNum<eT> & operator+=(DualNum<eT> rhs) {_f0 += rhs._f0; _f1 += rhs._f1; return *this; }
-  DualNum<eT> & operator-=(DualNum<eT> rhs) {_f0 -= rhs._f0; _f1 -= rhs._f1; return *this; }
-  DualNum<eT> & operator*=(DualNum<eT> rhs) {
-    eT tf0, tf1;
+
+  DualNum<_Tp> operator*(const DualNum<_Tp> rhs) const {
+    return DualNum<_Tp>(_f0 * rhs._f0, _f0 * rhs._f1 + _f1 * rhs._f0);
+  }
+
+  DualNum<_Tp> & operator+=(DualNum<_Tp> rhs) {
+    _f0 += rhs._f0;
+    _f1 += rhs._f1;
+    return *this;
+  }
+
+  DualNum<_Tp> & operator-=(DualNum<_Tp> rhs) {
+    _f0 -= rhs._f0;
+    _f1 -= rhs._f1;
+    return *this;
+  }
+
+  DualNum<_Tp> & operator*=(DualNum<_Tp> rhs) {
+    _Tp tf0, tf1;
     tf0 = _f0;
     tf1 = _f1;
     _f0 = tf0 * rhs._f0;
     _f1 = tf0 * rhs._f1 + tf1 * rhs._f0;
     return *this;
   }
-  DualNum<eT> & operator*=(eT rhs) {
+
+  DualNum<_Tp> & operator*=(_Tp rhs) {
     _f0 *= rhs;
     _f1 *= rhs;
     return *this;
   }
-  DualNum<eT> & operator/=(eT rhs) {
+
+  DualNum<_Tp> & operator/=(_Tp rhs) {
     _f0 /= rhs;
     _f1 /= rhs;
   }
 
+  // friend functions (todo- dont need to be friends)
+  template <class eeT> friend std::ostream & operator<<(std::ostream & output, const DualNum<eeT> & rhs);
+  template <class eeT> friend eeT realpart(const DualNum<eeT> & d);
+  template <class eeT> friend eeT ipart(const DualNum<eeT> & d);
+
   // math.h functions
-  template <class eeT, class eeT2> friend DualNum<eeT> pow(DualNum<eeT> x, eeT2 a);
+  template <class eeT> friend DualNum<eeT> pow(DualNum<eeT> x, eeT a);
   //template <class eeT> friend DualNum<eeT> pow(DualNum<eeT> x, DualNum<eeT> a);
   template <class eeT> friend DualNum<eeT> exp(DualNum<eeT> x);
   template <class eeT> friend DualNum<eeT> log(DualNum<eeT> x);
@@ -111,107 +121,145 @@ public:
   template <class eeT> friend DualNum<eeT> atan(DualNum<eeT> x);
   template <class eeT> friend DualNum<eeT> atan2(DualNum<eeT> y, DualNum<eeT> x);
   template <class eeT> friend DualNum<eeT> sqrt(DualNum<eeT> x);
-  template <class eeT, class eeT2> friend DualNum<eeT> max(DualNum<eeT> x1, DualNum<eeT2> x2);
-  template <class eeT, class eeT2> friend DualNum<eeT> max(DualNum<eeT> x1, eeT2 x2);
-  template <class eeT, class eeT2> friend DualNum<eeT2> max(eeT x1, DualNum<eeT2> x2);
-  template <class eeT, class eeT2> friend DualNum<eeT> min(DualNum<eeT> x1, DualNum<eeT2> x2);
-  template <class eeT, class eeT2> friend DualNum<eeT> min(DualNum<eeT> x1, eeT2 x2);
-  template <class eeT, class eeT2> friend DualNum<eeT2> min(eeT x1, DualNum<eeT2> x2);
+  template <class eeT> friend DualNum<eeT> max(DualNum<eeT> x1, DualNum<eeT> x2);
+  template <class eeT> friend DualNum<eeT> max(DualNum<eeT> x1, eeT x2);
+  template <class eeT> friend DualNum<eeT> max(eeT x1, DualNum<eeT> x2);
+  template <class eeT> friend DualNum<eeT> min(DualNum<eeT> x1, DualNum<eeT> x2);
+  template <class eeT> friend DualNum<eeT> min(DualNum<eeT> x1, eeT x2);
+  template <class eeT> friend DualNum<eeT> min(eeT x1, DualNum<eeT> x2);
   template <class eeT> friend DualNum<eeT> conj(const DualNum<eeT> & x);
-  //template <class eeT> friend DualNum<eeT> real(const DualNum<eeT> & x) { return x.real(); }
+  template <class eeT> friend DualNum<eeT> real(const DualNum<eeT> & x);
   template <class eeT> friend DualNum<eeT> imag(const DualNum<eeT> & x);
   template <class eeT> friend DualNum<eeT> abs(const DualNum<eeT> & x);
   template <class eeT> friend DualNum<eeT> abs2(const DualNum<eeT> & x);
 
   // comparison
-  template <class eeT, class eeT2> friend bool operator>(DualNum<eeT> lhs, DualNum<eeT2> rhs);
-  template <class eeT, class eeT2> friend bool operator>(eeT lhs, DualNum<eeT2> rhs);
-  template <class eeT, class eeT2> friend bool operator>(DualNum<eeT> lhs, eeT2 rhs);
-  template <class eeT, class eeT2> friend bool operator>=(DualNum<eeT> lhs, DualNum<eeT2> rhs);
-  template <class eeT, class eeT2> friend bool operator>=(eeT lhs, DualNum<eeT2> rhs);
-  template <class eeT, class eeT2> friend bool operator>=(DualNum<eeT> lhs, eeT2 rhs);
-  template <class eeT, class eeT2> friend bool operator<(DualNum<eeT> lhs, DualNum<eeT2> rhs);
-  template <class eeT, class eeT2> friend bool operator<(eeT lhs, DualNum<eeT2> rhs);
-  template <class eeT, class eeT2> friend bool operator<(DualNum<eeT> lhs, eeT2 rhs);
-  template <class eeT, class eeT2> friend bool operator<=(DualNum<eeT> lhs, DualNum<eeT2> rhs);
-  template <class eeT, class eeT2> friend bool operator<=(eeT lhs, DualNum<eeT2> rhs);
-  template <class eeT, class eeT2> friend bool operator<=(DualNum<eeT> lhs, eeT2 rhs);
-  template <class eeT, class eeT2> friend bool operator==(DualNum<eeT> lhs, DualNum<eeT2> rhs);
-  template <class eeT, class eeT2> friend bool operator==(eeT lhs, DualNum<eeT2> rhs);
-  template <class eeT, class eeT2> friend bool operator==(DualNum<eeT> lhs, eeT2 rhs);
-  template <class eeT, class eeT2> friend bool operator!=(DualNum<eeT> lhs, DualNum<eeT2> rhs);
-  template <class eeT, class eeT2> friend bool operator!=(eeT lhs, DualNum<eeT2> rhs);
-  template <class eeT, class eeT2> friend bool operator!=(DualNum<eeT> lhs, eeT2 rhs);
+  template <class eeT> friend bool operator>(DualNum<eeT> lhs, DualNum<eeT> rhs);
+  template <class eeT> friend bool operator>(eeT lhs, DualNum<eeT> rhs);
+  template <class eeT> friend bool operator>(DualNum<eeT> lhs, eeT rhs);
+  template <class eeT> friend bool operator>=(DualNum<eeT> lhs, DualNum<eeT> rhs);
+  template <class eeT> friend bool operator>=(eeT lhs, DualNum<eeT> rhs);
+  template <class eeT> friend bool operator>=(DualNum<eeT> lhs, eeT rhs);
+  template <class eeT> friend bool operator<(DualNum<eeT> lhs, DualNum<eeT> rhs);
+  template <class eeT> friend bool operator<(eeT lhs, DualNum<eeT> rhs);
+  template <class eeT> friend bool operator<(DualNum<eeT> lhs, eeT rhs);
+  template <class eeT> friend bool operator<=(DualNum<eeT> lhs, DualNum<eeT> rhs);
+  template <class eeT> friend bool operator<=(eeT lhs, DualNum<eeT> rhs);
+  template <class eeT> friend bool operator<=(DualNum<eeT> lhs, eeT rhs);
+  template <class eeT> friend bool operator==(DualNum<eeT> lhs, DualNum<eeT> rhs);
+  template <class eeT> friend bool operator==(eeT lhs, DualNum<eeT> rhs);
+  template <class eeT> friend bool operator==(DualNum<eeT> lhs, eeT rhs);
+  template <class eeT> friend bool operator!=(DualNum<eeT> lhs, DualNum<eeT> rhs);
+  template <class eeT> friend bool operator!=(eeT lhs, DualNum<eeT> rhs);
+  template <class eeT> friend bool operator!=(DualNum<eeT> lhs, eeT rhs);
 };
 
-// friend function defs
-template <class eeT> eeT real(const DualNum<eeT> & d) { return d.real(); }
-template <class eeT> eeT dual(const DualNum<eeT> & d) { return d.dual(); }
+// function defs
+template <class eeT>
+inline eeT
+realpart(const DualNum<eeT> & d)
+{
+  return d.realpart();
+}
+
+template <class eeT>
+inline eeT
+ipart(const DualNum<eeT> & d)
+{
+  return d.ipart();
+}
 
 // basic ops
 template <class eeT>
-DualNum<eeT> operator+(const eeT lhs, const DualNum<eeT> rhs) {
-  return DualNum<eeT>(lhs + rhs._f0, rhs._f1);
+inline DualNum<eeT>
+operator+(const eeT lhs, const DualNum<eeT> rhs)
+{
+  return DualNum<eeT>(lhs) += rhs;
 }
+
 template <class eeT>
-DualNum<eeT> operator-(const eeT lhs, const DualNum<eeT> rhs) {
-  return DualNum<eeT>(lhs - rhs._f0, -rhs._f1);
+inline DualNum<eeT>
+operator-(const eeT lhs, const DualNum<eeT> rhs)
+{
+  return DualNum<eeT>(lhs) -= rhs;
 }
+
 template <class eeT>
-DualNum<eeT> operator*(const eeT lhs, const DualNum<eeT> rhs) {
-  return DualNum<eeT>(lhs._f0 * rhs._f0, lhs._f0 * rhs._f1 + lhs._f1 * rhs._f0);
+inline DualNum<eeT>
+operator*(const eeT lhs, const DualNum<eeT> rhs)
+{
+  return DualNum<eeT>(lhs) *= rhs;
 }
+
 template <class eeT>
-DualNum<eeT> operator/(const DualNum<eeT> lhs, const DualNum<eeT> rhs) {
-  DualNum<eeT> temp, inv;
-  inv = pow(rhs, -1.0);
-  temp = lhs * inv;
-  return temp;
+inline DualNum<eeT>
+operator/(const DualNum<eeT> lhs, const DualNum<eeT> rhs)
+{
+  DualNum<eeT> temp = lhs;
+  return lhs /= rhs;
 }
+
 template <class eeT>
-DualNum<eeT> operator/(const eeT lhs, const DualNum<eeT> rhs) {
-  DualNum<eeT> temp, inv;
-  inv = pow(rhs, -1.0);
-  temp = lhs * inv;
-  return temp;
+inline DualNum<eeT>
+operator/(const eeT lhs, const DualNum<eeT> rhs)
+{
+  return DualNum<eeT>(lhs) /= rhs;
 }
+
 template <class eeT>
-DualNum<eeT> operator/(const DualNum<eeT> lhs, const eeT rhs) {
-  eeT inv = 1.0 / rhs;
-  return DualNum<eeT>(inv * lhs._f0, inv * lhs._f1);
+inline DualNum<eeT>
+operator/(const DualNum<eeT> lhs, const eeT rhs)
+{
+  DualNum<eeT> temp = lhs;
+  return temp /= rhs;
 }
 
 // math.h functions
-template <class eeT, class eeT2> DualNum<eeT> pow(DualNum<eeT> x, eeT2 a) {
-  DualNum<eeT> temp;
-  eeT deriv, xval, tol;
+template <class _Tp>
+DualNum<_Tp>
+pow(DualNum<_Tp> x, _Tp a)
+{
+  DualNum<_Tp> temp;
+  _Tp deriv, xval, tol;
   xval = x._f0;
-  tol = 1e-15; // TODO- should use type traits of eeT
-  if (std::abs(xval) < tol) {
-    if (xval >= 0)
-      xval = tol;
-    if (xval < 0)
-      xval = -tol;
+  tol = _Tp(1e-15); // TODO- should use type traits of _Tp instead of 1e-15
+  if (std::abs(xval) < std::abs(tol)) {
+    xval = x._f0 / (std::abs(x._f0) / _Tp(1e-15));
+    //if (xval >= 0)
+    //  xval = tol;
+    //if (xval < 0)
+    //  xval = -tol;
   }
-  deriv = a * ::pow(xval, (a - 1.0));
-  temp._f0 = ::pow(x._f0, a);  //Use actual x value, only use tol for derivs
+  deriv = a * std::pow(xval, (a - _Tp(1.0)));
+  temp._f0 = std::pow(x._f0, a);  //Use actual x value, only use tol for derivs
   temp._f1 = x._f1 * deriv;
   return temp;
 }
 //template <class eeT> DualNum<eeT> pow(DualNum<eeT> x, DualNum<eeT> a) {
 //
 //}
-template <class eeT> DualNum<eeT> exp(DualNum<eeT> x) {
+
+template <class eeT>
+DualNum<eeT> exp(DualNum<eeT> x)
+{
   eeT deriv;
-  deriv = exp(x._f0);
+  deriv = std::exp(x._f0);
   return DualNum<eeT>(deriv, deriv * x._f1);
 }
-template <class eeT> DualNum<eeT> log(DualNum<eeT> x) {
+
+template <class eeT>
+DualNum<eeT>
+log(DualNum<eeT> x)
+{
   eeT deriv1;
   deriv1 = x._f1 / x._f0;
   return DualNum<eeT>(log(x._f0), deriv1);
 }
-template <class eeT> DualNum<eeT> sin(DualNum<eeT> x) {
+
+template <class eeT>
+DualNum<eeT>
+sin(DualNum<eeT> x)
+{
   DualNum<eeT> temp;
   eeT funval, deriv;
   funval = sin(x._f0);
@@ -220,7 +268,11 @@ template <class eeT> DualNum<eeT> sin(DualNum<eeT> x) {
   temp._f1 = deriv * x._f1;
   return temp;
 }
-template <class eeT> DualNum<eeT> cos(DualNum<eeT> x) {
+
+template <class eeT>
+DualNum<eeT>
+cos(DualNum<eeT> x)
+{
   DualNum<eeT> temp;
   eeT funval, deriv;
   funval = cos(x._f0);
@@ -229,7 +281,11 @@ template <class eeT> DualNum<eeT> cos(DualNum<eeT> x) {
   temp._f1 = deriv * x._f1;
   return temp;
 }
-template <class eeT> DualNum<eeT> tan(DualNum<eeT> x) {
+
+template <class eeT>
+DualNum<eeT>
+tan(DualNum<eeT> x)
+{
   DualNum<eeT> temp;
   eeT funval, deriv;
   funval = tan(x._f0);
@@ -238,7 +294,11 @@ template <class eeT> DualNum<eeT> tan(DualNum<eeT> x) {
   temp._f1 = deriv*x._f1;
   return temp;
 }
-template <class eeT> DualNum<eeT> asin(DualNum<eeT> x) {
+
+template <class eeT>
+DualNum<eeT>
+asin(DualNum<eeT> x)
+{
   DualNum<eeT> temp;
   eeT funval, deriv1, deriv;
   funval = asin(x._f0);
@@ -248,8 +308,12 @@ template <class eeT> DualNum<eeT> asin(DualNum<eeT> x) {
   temp._f1 = deriv*x._f1;
   return temp;
 }
+
 #if 0
-template <class eeT> DualNum<eeT> acos(DualNum<eeT> x) {
+template <class eeT>
+DualNum<eeT>
+acos(DualNum<eeT> x)
+{
   DualNum<eeT> temp;
   eeT funval, deriv1, deriv;
   funval = acos(x._f0);
@@ -260,7 +324,11 @@ template <class eeT> DualNum<eeT> acos(DualNum<eeT> x) {
   return temp;
 }
 #endif
-template <class eeT> DualNum<eeT> atan(DualNum<eeT> x) {
+
+template <class eeT>
+DualNum<eeT>
+atan(DualNum<eeT> x)
+{
   DualNum<eeT> temp;
   eeT funval, deriv1, deriv;
   funval = atan(x._f0);
@@ -270,7 +338,11 @@ template <class eeT> DualNum<eeT> atan(DualNum<eeT> x) {
   temp._f1 = deriv * x._f1;
   return temp;
 }
-template <class eeT> DualNum<eeT> atan2(DualNum<eeT> y, DualNum<eeT> x) {
+
+template <class eeT>
+DualNum<eeT>
+atan2(DualNum<eeT> y, DualNum<eeT> x)
+{
   DualNum<eeT> temp;
   eeT funval, deriv1, deriv;
   funval = atan2(y._f0, x._f0);
@@ -281,90 +353,217 @@ template <class eeT> DualNum<eeT> atan2(DualNum<eeT> y, DualNum<eeT> x) {
   temp._f1 = deriv * x._f1;
   return temp;
 }
-template <class eeT> DualNum<eeT> sqrt(DualNum<eeT> x) {
-  return pow(x, 0.5);
+
+template <class eeT>
+DualNum<eeT>
+sqrt(DualNum<eeT> x)
+{
+  return pow(x, (eeT)0.5);
 }
-template <class eeT, class eeT2> DualNum<eeT> max(DualNum<eeT> x1, DualNum<eeT2> x2) {
+
+template <class eeT>
+DualNum<eeT>
+max(DualNum<eeT> x1, DualNum<eeT> x2)
+{
   return x1._f0 >= x2._f0 ? x1 : x2;
 }
-template <class eeT, class eeT2> DualNum<eeT> max(DualNum<eeT> x1, eeT2 x2) {
+
+template <class eeT>
+DualNum<eeT>
+max(DualNum<eeT> x1, eeT x2)
+{
   return x1._f0 >= x2 ? x1 : DualNum<eeT>(x2);
 }
-template <class eeT, class eeT2> DualNum<eeT2> max(eeT x1, DualNum<eeT2> x2) {
-  return x1 >= x2._f0 ? DualNum<eeT2>(x1) : x2;
+
+template <class eeT>
+DualNum<eeT>
+max(eeT x1, DualNum<eeT> x2)
+{
+  return x1 >= x2._f0 ? DualNum<eeT>(x1) : x2;
 }
-template <class eeT, class eeT2> DualNum<eeT> min(DualNum<eeT> x1, DualNum<eeT2> x2) {
+
+template <class eeT>
+DualNum<eeT>
+min(DualNum<eeT> x1, DualNum<eeT> x2)
+{
   return x1._f0 <= x2._f0 ? x1 : x2;
 }
-template <class eeT, class eeT2> DualNum<eeT> min(DualNum<eeT> x1, eeT2 x2) {
+
+template <class eeT>
+DualNum<eeT>
+min(DualNum<eeT> x1, eeT x2)
+{
   return x1._f0 <= x2 ? x1 : DualNum<eeT>(x2);
 }
-template <class eeT, class eeT2> DualNum<eeT2> min(eeT x1, DualNum<eeT2> x2) {
-  return x1 <= x2._f0 ? DualNum<eeT2>(x1) : x2;
+
+template <class eeT>
+DualNum<eeT>
+min(eeT x1, DualNum<eeT> x2)
+{
+  return x1 <= x2._f0 ? DualNum<eeT>(x1) : x2;
 }
-template <class eeT> DualNum<eeT> conj(const DualNum<eeT> & x) {
+
+template <class eeT>
+DualNum<eeT>
+conj(const DualNum<eeT> & x)
+{
   return DualNum<eeT>(conj(x._f0), conj(x._f1));
 }
-//template <class eeT> DualNum<eeT> real(const DualNum<eeT> & x) { return x.real(); }
-template <class eeT> DualNum<eeT> imag(const DualNum<eeT> & x) {
+
+template <class eeT>
+DualNum<eeT>
+real(const DualNum<eeT> & x)
+{
+  // todo - dont just make things up
+  return DualNum<eeT>(real(x._f0), real(x._f1));
+}
+
+template <class eeT>
+DualNum<eeT>
+imag(const DualNum<eeT> & x)
+{
+  // todo - dont just make things up
   return DualNum<eeT>(imag(x._f0), imag(x._f1));
 }
-template <class eeT> DualNum<eeT> abs(const DualNum<eeT> & x) { return std::abs(x._f0); }
-template <class eeT> DualNum<eeT> abs2(const DualNum<eeT> & x) { return x * x; }
 
-// comparison
-template <class eeT, class eeT2> bool operator>(DualNum<eeT> lhs, DualNum<eeT2> rhs) {
+template <class eeT>
+inline DualNum<eeT>
+abs(const DualNum<eeT> & x)
+{
+  return std::abs(x.realpart()) == x.realpart() ? x : -x;
+}
+
+template <class eeT>
+DualNum<eeT>
+abs2(const DualNum<eeT> & x)
+{
+  return x * x;
+}
+
+/// comparison
+template <class eeT>
+inline bool
+operator>(DualNum<eeT> lhs, DualNum<eeT> rhs)
+{
   return lhs._f0 > rhs._f0;
 }
-template <class eeT, class eeT2> bool operator>(eeT lhs, DualNum<eeT2> rhs) {
+
+template <class eeT>
+inline bool
+operator>(eeT lhs, DualNum<eeT> rhs)
+{
   return lhs > rhs._f0;
 }
-template <class eeT, class eeT2> bool operator>(DualNum<eeT> lhs, eeT2 rhs) {
+
+template <class eeT>
+inline bool
+operator>(DualNum<eeT> lhs, eeT rhs)
+{
   return lhs._f0 > rhs;
 }
-template <class eeT, class eeT2> bool operator>=(DualNum<eeT> lhs, DualNum<eeT2> rhs) {
+
+template <class eeT>
+inline bool
+operator>=(DualNum<eeT> lhs, DualNum<eeT> rhs)
+{
   return lhs._f0 >= rhs._f0;
 }
-template <class eeT, class eeT2> bool operator>=(eeT lhs, DualNum<eeT2> rhs) {
+
+template <class eeT>
+inline bool
+operator>=(eeT lhs, DualNum<eeT> rhs)
+{
   return lhs >= rhs._f0;
 }
-template <class eeT, class eeT2> bool operator>=(DualNum<eeT> lhs, eeT2 rhs) {
+
+template <class eeT>
+inline bool
+operator>=(DualNum<eeT> lhs, eeT rhs)
+{
   return lhs._f0 >= rhs;
 }
-template <class eeT, class eeT2> bool operator<(DualNum<eeT> lhs, DualNum<eeT2> rhs) {
+
+template <class eeT>
+inline bool
+operator<(DualNum<eeT> lhs, DualNum<eeT> rhs)
+{
   return lhs._f0 < rhs._f0;
 }
-template <class eeT, class eeT2> bool operator<(eeT lhs, DualNum<eeT2> rhs) {
+
+template <class eeT>
+inline bool
+operator<(eeT lhs, DualNum<eeT> rhs)
+{
   return lhs < rhs._f0;
 }
-template <class eeT, class eeT2> bool operator<(DualNum<eeT> lhs, eeT2 rhs) {
+
+template <class eeT>
+inline bool
+operator<(DualNum<eeT> lhs, eeT rhs)
+{
   return lhs._f0 < rhs;
 }
-template <class eeT, class eeT2> bool operator<=(DualNum<eeT> lhs, DualNum<eeT2> rhs) {
+
+template <class eeT>
+inline bool
+operator<=(DualNum<eeT> lhs, DualNum<eeT> rhs)
+{
   return lhs._f0 <= rhs._f0;
 }
-template <class eeT, class eeT2> bool operator<=(eeT lhs, DualNum<eeT2> rhs) {
+
+template <class eeT>
+inline bool
+operator<=(eeT lhs, DualNum<eeT> rhs)
+{
   return lhs <= rhs._f0;
 }
-template <class eeT, class eeT2> bool operator<=(DualNum<eeT> lhs, eeT2 rhs) {
+
+template <class eeT>
+inline bool
+operator<=(DualNum<eeT> lhs, eeT rhs)
+{
   return lhs._f0 <= rhs;
 }
-template <class eeT, class eeT2> bool operator==(DualNum<eeT> lhs, DualNum<eeT2> rhs) {
+
+template <class eeT>
+inline bool
+operator==(DualNum<eeT> lhs, DualNum<eeT> rhs)
+{
   return lhs._f0 == rhs._f0;
 }
-template <class eeT, class eeT2> bool operator==(eeT lhs, DualNum<eeT2> rhs) {
+
+template <class eeT>
+inline bool
+operator==(eeT lhs, DualNum<eeT> rhs)
+{
   return lhs == rhs._f0;
 }
-template <class eeT, class eeT2> bool operator==(DualNum<eeT> lhs, eeT2 rhs) {
+
+template <class eeT>
+inline bool
+operator==(DualNum<eeT> lhs, eeT rhs)
+{
   return lhs._f0 == rhs;
 }
-template <class eeT, class eeT2> bool operator!=(DualNum<eeT> lhs, DualNum<eeT2> rhs) {
+
+template <class eeT>
+inline bool
+operator!=(DualNum<eeT> lhs, DualNum<eeT> rhs)
+{
   return lhs._f0 != rhs._f0;
 }
-template <class eeT, class eeT2> bool operator!=(eeT lhs, DualNum<eeT2> rhs) {
+
+template <class eeT>
+inline bool
+operator!=(eeT lhs, DualNum<eeT> rhs)
+{
   return lhs != rhs._f0;
 }
-template <class eeT, class eeT2> bool operator!=(DualNum<eeT> lhs, eeT2 rhs) {
+
+template <class eeT>
+inline bool
+operator!=(DualNum<eeT> lhs, eeT rhs)
+{
   return lhs._f0 != rhs;
 }
 
@@ -389,7 +588,9 @@ struct NumTraits<DualNum<_Scalar> > : GenericNumTraits<_Scalar>
   static inline Scalar epsilon() { return NumTraits<Scalar>::epsilon(); }
   static inline Scalar dummy_precision() { return NumTraits<Scalar>::dummy_precision(); }
 };
+
 namespace internal {
+
 template<typename T> struct scalar_product_traits<T, DualNum<T> > {
   enum {
     // Cost = 2*NumTraits<T>::MulCost,
@@ -405,7 +606,8 @@ template<typename T> struct scalar_product_traits<DualNum<T>, T> {
   };
   typedef DualNum<T> ReturnType;
 };
-}
+
+} // namespace internal
 
 #include <ostream>
 template <class eeT>
@@ -415,6 +617,6 @@ std::ostream & operator<<(std::ostream & output, const DualNum<eeT> & rhs)
   return output;
 }
 
-}
+} // namespace Eigen
 
 #endif
