@@ -577,15 +577,6 @@ template<typename T> struct scalar_product_traits<DualNum<T>, T> {
 };
 
 } // namespace internal
-
-#include <ostream>
-template <class eeT>
-std::ostream & operator<<(std::ostream & output, const DualNum<eeT> & rhs)
-{
-  output << "(" << rhs.realpart() << " + e*" << rhs.epart() << ")";
-  return output;
-}
-
 } // namespace Eigen
 
 #endif
