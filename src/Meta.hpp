@@ -29,6 +29,7 @@
 #include <Eigen/Core>
 #include <stdexcept>
 //#include <dualnum.hpp>
+#include <unsupported/Eigen/DualNum>
 
 namespace pwie
 {
@@ -69,6 +70,7 @@ class Functor : public Func {
 public:
   typedef typename Func::Scalar Scalar;
   typedef std::complex<Scalar> DualScalar; // todo: use actual dual numbers
+  //typedef Eigen::DualNum<Scalar> DualScalar;
   enum {
     InputDim = Func::InputsAtCompileTime,
     ValueDim = Func::ValuesAtCompileTime
@@ -120,7 +122,7 @@ public:
     JacobianType diff = (gradD - grad);
     //Scalar error = diff.norm();
     Scalar error = diff.cwiseAbs().maxCoeff(&row, &col);
-    if (error > 1e-13) {
+    if (error > sqrt(std::numeric_limits<Scalar>::epsilon())) {
       gradientFiniteDiff(x, gradFD);
       std::cerr << "(checkGradient error)=" << error
                 << "(" << row << "," << col << ") "
@@ -132,7 +134,7 @@ public:
 
   // calculate the gradient/jacobian using dual numbers
   void gradientDual(const InputType & x, JacobianType & grad) const {
-    Scalar eps = 1e-11;
+    Scalar eps = sqrt(std::numeric_limits<Scalar>::epsilon());
     const size_t DIM = x.rows();
     JacobianType gg(DIM);
 #pragma omp parallel
@@ -140,9 +142,13 @@ public:
       DualInputType xx = x.template cast<DualScalar>();
 #pragma omp for
       for (size_t i = 0; i < DIM; i++) {
+#if 1
         xx[i] += DualScalar(0, eps);
-        //grad[i] = imag(Func::template operator() <DualScalar>(xx)) / eps;
         gg[i] = imag(Func::f(xx)) / eps;
+#else
+        xx[i] += DualScalar(0, 1.0);
+        gg[i] = Func::f(xx).epart();
+#endif
         xx[i] = x[i];
       }
     }
@@ -150,7 +156,9 @@ public:
   }
 
   // calculate the gradient using finite differences
-  void gradientFiniteDiff(const InputType & x, JacobianType & grad, Scalar eps = 1e-8) const {
+  void gradientFiniteDiff(const InputType & x, JacobianType & grad,
+                          Scalar eps = sqrt(std::numeric_limits<Scalar>::epsilon())) const
+  {
     const size_t DIM = x.rows();
     typename Func::JacobianType finite(DIM);
 #pragma omp parallel
