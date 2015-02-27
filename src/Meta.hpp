@@ -111,15 +111,15 @@ public:
   }
 
   // double-check the gradient computation (using either finite-differences or dual numbers)
-  double checkGradient(const InputType & x) const {
+  Scalar checkGradient(const InputType & x) const {
     const size_t DIM = x.rows();
     JacobianType grad(DIM), gradD(DIM), gradFD(DIM);
     Func::gradient(x, grad);
     gradientDual(x, gradD);
     size_t row, col;
     JacobianType diff = (gradD - grad);
-    //double error = diff.norm();
-    double error = diff.cwiseAbs().maxCoeff(&row, &col);
+    //Scalar error = diff.norm();
+    Scalar error = diff.cwiseAbs().maxCoeff(&row, &col);
     if (error > 1e-13) {
       gradientFiniteDiff(x, gradFD);
       std::cerr << "(checkGradient error)=" << error
@@ -132,7 +132,7 @@ public:
 
   // calculate the gradient/jacobian using dual numbers
   void gradientDual(const InputType & x, JacobianType & grad) const {
-    double eps = 1e-11;
+    Scalar eps = 1e-11;
     const size_t DIM = x.rows();
     JacobianType gg(DIM);
 #pragma omp parallel
@@ -150,7 +150,7 @@ public:
   }
 
   // calculate the gradient using finite differences
-  void gradientFiniteDiff(const InputType & x, JacobianType & grad, double eps = 1e-8) const {
+  void gradientFiniteDiff(const InputType & x, JacobianType & grad, Scalar eps = 1e-8) const {
     const size_t DIM = x.rows();
     typename Func::JacobianType finite(DIM);
 #pragma omp parallel
@@ -170,21 +170,21 @@ public:
   }
 
   // calculate the hessian using finite differences
-  void hessianFiniteDiff(const InputType & x, HessianType & hes, double eps = 1e-6) const {
+  void hessianFiniteDiff(const InputType & x, HessianType & hes, Scalar eps = 1e-6) const {
     const size_t DIM = x.rows();
     typename Func::InputType xx = x;
     hes.resize(DIM,DIM);
     for (size_t i = 0; i < DIM; i++) {
       for (size_t j = 0; j < DIM; j++) {
-        double f4 = Func::f(xx);
+        Scalar f4 = Func::f(xx);
         xx[i] += eps;
         xx[j] += eps;
-        double f1 = Func::f(xx);
+        Scalar f1 = Func::f(xx);
         xx[j] -= eps;
-        double f2 = Func::f(xx);
+        Scalar f2 = Func::f(xx);
         xx[j] += eps;
         xx[i] -= eps;
-        double f3 = Func::f(xx);
+        Scalar f3 = Func::f(xx);
         hes(i, j) = (f1 - f2 - f3 + f4) / (eps * eps);
         xx[i] = x[i];
         xx[j] = x[j];
@@ -195,23 +195,20 @@ public:
   // }
 };
 
-const double EPS = 2.2204e-016;
-const double INF = HUGE_VAL;
-
 template<typename T>
 bool AssertSimiliar(T a, T b)
 {
-  return fabs(a - b) <=  1e-2;
+  return std::abs(a - b) <=  1e-2;
 }
 template<typename T>
 bool AssertGreaterThan(T a, T b)
 {
-  return (a - b) > ((fabs(a) < fabs(b) ? fabs(b) : fabs(a)) * 1e-3);
+  return (a - b) > ((std::abs(a) < std::abs(b) ? std::abs(b) : std::abs(a)) * 1e-3);
 }
 template<typename T>
 bool AssertLessThan(T a, T b)
 {
-  return (b - a) > ((fabs(a) < fabs(b) ? fabs(b) : fabs(a)) * 1e-3);
+  return (b - a) > ((std::abs(a) < std::abs(b) ? std::abs(b) : std::abs(a)) * 1e-3);
 }
 template<typename T>
 bool AssertEqual(T a, T b)

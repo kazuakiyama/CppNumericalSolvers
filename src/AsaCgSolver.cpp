@@ -56,29 +56,32 @@ private:
 template <typename FUNCTOR>
 static double myvalue(asa_objective *asa)
 {
-  Eigen::Map<typename FUNCTOR::InputType> x(asa->x, asa->n);
-  return Global<FUNCTOR>::get()->f(typename FUNCTOR::InputType(x));
+  Eigen::Map<Eigen::VectorXd> x(asa->x, asa->n);
+  typename FUNCTOR::InputType xx = x.cast<typename FUNCTOR::InputType::Scalar>();
+  return Global<FUNCTOR>::get()->f(xx);
 }
 
 template <typename FUNCTOR>
 void mygrad(asa_objective *asa)
 {
-  Eigen::Map<typename FUNCTOR::InputType> x(asa->x, asa->n);
-  Eigen::Map<typename FUNCTOR::InputType> g(asa->g, asa->n);
+  Eigen::Map<Eigen::VectorXd> x(asa->x, asa->n);
+  typename FUNCTOR::InputType xx = x.cast<typename FUNCTOR::InputType::Scalar>();
   typename FUNCTOR::JacobianType grad(asa->n);
-  Global<FUNCTOR>::get()->gradient(typename FUNCTOR::InputType(x), grad);
-  g = grad;
+  Global<FUNCTOR>::get()->gradient(typename FUNCTOR::InputType(xx), grad);
+  Eigen::Map<Eigen::VectorXd> g(asa->g, asa->n);
+  g = grad.template cast<double>();
 }
 
 template <typename FUNCTOR>
 double myvalgrad(asa_objective *asa)
 {
-  Eigen::Map<typename FUNCTOR::InputType> x(asa->x, asa->n);
-  Eigen::Map<typename FUNCTOR::JacobianType> g(asa->g, asa->n);
+  Eigen::Map<Eigen::VectorXd> x(asa->x, asa->n);
+  typename FUNCTOR::InputType xx = x.cast<typename FUNCTOR::InputType::Scalar>();
   typename FUNCTOR::JacobianType grad(asa->n);
-  Global<FUNCTOR>::get()->gradient(typename FUNCTOR::InputType(x), grad);
-  g = grad;
-  return Global<FUNCTOR>::get()->f(typename FUNCTOR::InputType(x));
+  Global<FUNCTOR>::get()->gradient(typename FUNCTOR::InputType(xx), grad);
+  Eigen::Map<Eigen::VectorXd> g(asa->g, asa->n);
+  g = grad.template cast<double>();
+  return Global<FUNCTOR>::get()->f(typename FUNCTOR::InputType(xx));
 }
 
 template <typename Func>
@@ -95,9 +98,9 @@ AsaCgSolver<Func>::internalSolve(InputType & x0)
     asa_parm asaParm;
 
     /* allocate arrays for problem solution and bounds */
-    double * x  = x0.data();
-    double * lo = _lower.data();
-    double * hi = _upper.data();
+    Eigen::VectorXd x  = x0.template cast<double>();
+    Eigen::VectorXd lo = _lower.template cast<double>();
+    Eigen::VectorXd hi = _upper.template cast<double>();
 
     /* if you want to change parameter value, initialize strucs with default */
     asa_cg_default (&cgParm) ;
@@ -114,14 +117,15 @@ AsaCgSolver<Func>::internalSolve(InputType & x0)
 
     /* run the code */
     Global<Functor<Func> >::get() = this;
-    asa_cg(x, lo, hi, DIM, NULL, &cgParm, &asaParm,
+    asa_cg(x.data(), lo.data(), hi.data(),
+           DIM, NULL, &cgParm, &asaParm,
            settings.gradTol, /* grad_tol */
            &myvalue<Functor<Func> >,
            &mygrad<Functor<Func> >,
            &myvalgrad<Functor<Func> >,
            NULL, NULL);
 
-    // x0 = x;
+    x0 = x.cast<Scalar>();
 }
 }
 

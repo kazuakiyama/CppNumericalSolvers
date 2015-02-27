@@ -44,7 +44,7 @@ class LbfgsbSolver : public ISolver<Func>
 
 private:
     MatrixX W, M;
-    double theta;
+    Scalar theta;
     InputType _upper;
     InputType _lower;
     int _DIM;
@@ -62,7 +62,7 @@ private:
     /// <parameter name="x_cp">cauchy point</parameter>
     /// <parameter name="du">unconstrained solution of subspace minimization</parameter>
     /// <parameter name="FreeVariables">flag (1 if is free variable and 0 if is not free variable)</parameter>
-    double FindAlpha(const InputType & x_cp, const VectorX & du, const std::vector<int> & FreeVariables);
+    Scalar FindAlpha(const InputType & x_cp, const VectorX & du, const std::vector<int> & FreeVariables);
     /// <summary>
     /// direct primal approach
     /// </summary>

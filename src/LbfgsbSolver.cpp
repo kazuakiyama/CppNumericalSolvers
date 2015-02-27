@@ -28,7 +28,9 @@
 namespace pwie
 {
 
-std::vector<int> sort_indexes(const std::vector< std::pair<int, double> > & v)
+template <typename _Scalar>
+std::vector<int>
+sort_indexes(const std::vector< std::pair<int, _Scalar> > & v)
 {
     std::vector<int> idx(v.size());
     for(size_t i = 0; i != idx.size(); ++i)
@@ -58,7 +60,7 @@ LbfgsbSolver<Func>::GetGeneralizedCauchyPoint(const InputType & x, JacobianType 
 
     // {all t_i} = { (idx,value), ... }
     // TODO: use "std::set" ?
-    std::vector<std::pair<int, double> > SetOfT;
+    std::vector<std::pair<int, Scalar> > SetOfT;
     // the feasible set is implicitly given by "SetOfT - {t_i==0}"
     JacobianType d = JacobianType::Zero(_DIM, 1);
 
@@ -67,11 +69,11 @@ LbfgsbSolver<Func>::GetGeneralizedCauchyPoint(const InputType & x, JacobianType 
     {
         if(g(j) == 0)
         {
-            SetOfT.push_back(std::make_pair(j, INF));
+            SetOfT.push_back(std::make_pair(j, std::numeric_limits<Scalar>::max()));
         }
         else
         {
-            double tmp = 0;
+            Scalar tmp = 0;
             if(g(j) < 0)
             {
                 tmp = (x(j) - _upper(j)) / g(j);
@@ -98,13 +100,13 @@ LbfgsbSolver<Func>::GetGeneralizedCauchyPoint(const InputType & x, JacobianType 
     // c :=     0
     c = MatrixX::Zero(M.rows(), 1);
     // f' :=    g^T*d = -d^Td
-    double f_prime = -d.dot(d);                         // (n operations)
+    Scalar f_prime = -d.dot(d);                         // (n operations)
     // f'' :=   \theta*d^T*d-d^T*W*M*W^T*d = -\theta*f' - p^T*M*p
-    double f_doubleprime = (double)(-1.0 * theta) * f_prime - p.dot(M * p); // (O(m^2) operations)
+    Scalar f_doubleprime = (Scalar)(-1.0 * theta) * f_prime - p.dot(M * p); // (O(m^2) operations)
     // \delta t_min :=  -f'/f''
-    double dt_min = -f_prime / f_doubleprime;
+    Scalar dt_min = -f_prime / f_doubleprime;
     // t_old :=     0
-    double t_old = 0;
+    Scalar t_old = 0;
     // b :=     argmin {t_i , t_i >0}
     int i = 0;
     for(int j = 0; j < _DIM; j++)
@@ -116,9 +118,9 @@ LbfgsbSolver<Func>::GetGeneralizedCauchyPoint(const InputType & x, JacobianType 
     int b = SortedIndices[i];
     // see below
     // t                    :=  min{t_i : i in F}
-    double t = SetOfT[b].second;
+    Scalar t = SetOfT[b].second;
     // \delta t             :=  t - 0
-    double dt = t - t_old;
+    Scalar dt = t - t_old;
 
     // examination of subsequent segments
     while((dt_min >= dt) && (i < _DIM))
@@ -129,17 +131,17 @@ LbfgsbSolver<Func>::GetGeneralizedCauchyPoint(const InputType & x, JacobianType 
             x_cauchy(b) = _lower(b);
 
         // z_b = x_p^{cp} - x_b
-        double zb = x_cauchy(b) - x(b);
+        Scalar zb = x_cauchy(b) - x(b);
         // c   :=  c +\delta t*p
         c += dt * p;
         // cache
         VectorX wbt = W.row(b);
-        f_prime += dt * f_doubleprime + (double) g(b) * g(b)
-                   + (double) theta * g(b) * zb
-                   - (double) g(b) * wbt.transpose() * (M * c);
-        f_doubleprime += (double) - 1.0 * theta * g(b) * g(b)
-                         - (double) 2.0 * (g(b) * (wbt.dot(M * p)))
-                         - (double) g(b) * g(b) * wbt.transpose() * (M * wbt);
+        f_prime += dt * f_doubleprime + (Scalar) g(b) * g(b)
+                   + (Scalar) theta * g(b) * zb
+                   - (Scalar) g(b) * wbt.transpose() * (M * c);
+        f_doubleprime += (Scalar) - 1.0 * theta * g(b) * g(b)
+                         - (Scalar) 2.0 * (g(b) * (wbt.dot(M * p)))
+                         - (Scalar) g(b) * g(b) * wbt.transpose() * (M * wbt);
         p += g(b) * wbt.transpose();
         d(b) = 0;
         dt_min = -f_prime / f_doubleprime;
@@ -171,13 +173,13 @@ LbfgsbSolver<Func>::GetGeneralizedCauchyPoint(const InputType & x, JacobianType 
     Debug(c.transpose());
 }
 template <typename Func>
-double
+typename LbfgsbSolver<Func>::Scalar
 LbfgsbSolver<Func>::FindAlpha(const InputType & x_cp, const VectorX & du, const std::vector<int> & FreeVariables)
 {
     /* this returns
      * a* = max {a : a <= 1 and  l_i-xc_i <= a*d_i <= u_i-xc_i}
      */
-    double alphastar = 1;
+    Scalar alphastar = 1;
     const unsigned int n = FreeVariables.size();
     for(unsigned int i = 0; i < n; i++)
     {
@@ -203,7 +205,7 @@ LbfgsbSolver<Func>::SubspaceMinimization(InputType & x_cauchy, InputType & x, co
                                          JacobianType & g, InputType & SubspaceMin)
 {
     // cached value: ThetaInverse=1/theta;
-    double theta_inverse = 1 / theta;
+    Scalar theta_inverse = 1 / theta;
 
     // size of "t"
     std::vector<int> FreeVariablesIndex;
@@ -254,7 +256,7 @@ LbfgsbSolver<Func>::SubspaceMinimization(InputType & x_cauchy, InputType & x, co
                   - theta_inverse * theta_inverse * WZ.transpose() * v;
     Debug(du.transpose());
     // STEP: 7
-    double alpha_star = FindAlpha(x_cauchy, du, FreeVariablesIndex);
+    Scalar alpha_star = FindAlpha(x_cauchy, du, FreeVariablesIndex);
 
     // STEP: 8
     VectorX dStar = alpha_star * du;
@@ -301,7 +303,7 @@ LbfgsbSolver<Func>::internalSolve(InputType & x0)
     JacobianType g(_DIM);
     size_t k = 0;
 
-    double f = Func::f(x);
+    Scalar f = Func::f(x);
     Functor<Func>::gradient(x, g);
 
     Debug(f);
@@ -318,7 +320,7 @@ LbfgsbSolver<Func>::internalSolve(InputType & x0)
     Stopwatch<> stopwatch;
     while(noConvergence(x, g) && (k < settings.maxIter))
     {
-        double f_old = f;
+        Scalar f_old = f;
         InputType x_old = x;
         JacobianType g_old = g;
 
@@ -330,7 +332,7 @@ LbfgsbSolver<Func>::internalSolve(InputType & x0)
         InputType SubspaceMin;
         SubspaceMinimization(CauchyPoint, x, c, g, SubspaceMin);
 
-        double step = 2;
+        Scalar step = 2;
 
         // STEP 4: perform linesearch and STEP 5: compute gradient
         int searchstatus = ISolver<Func>::LineSearch(x, SubspaceMin - x, f, g, step);
@@ -345,10 +347,10 @@ LbfgsbSolver<Func>::internalSolve(InputType & x0)
         InputType newS = x - x_old;
 
         // STEP 6:
-        double test = newS.dot(newY);
+        Scalar test = newS.dot(newY);
         test = (test < 0) ? -1.0 * test : test;
 
-        if(test > EPS * newY.squaredNorm())
+        if(test > (std::numeric_limits<Scalar>::min() * 1e-6 * newY.squaredNorm()))
         {
             if(k < settings.m)
             {
@@ -366,7 +368,7 @@ LbfgsbSolver<Func>::internalSolve(InputType & x0)
             sHistory.rightCols(1) = newS;
 
             // STEP 7:
-            theta = (double)(newY.transpose() * newY)
+            theta = (Scalar)(newY.transpose() * newY)
                     / (newY.transpose() * newS);
 
             W = MatrixX::Zero(yHistory.rows(),

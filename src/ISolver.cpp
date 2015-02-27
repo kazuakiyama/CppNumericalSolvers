@@ -41,13 +41,13 @@ lbfgsfloatval_t ISolver<Func>::lbfgs_evaluate(void *instance,
                                               )
 {
   (void)step;
-  const Eigen::Map<const typename Func::InputType> xPROXY(x, n);
-  const InputType xx = xPROXY;
-  Eigen::Map<typename Func::InputType> gPROXY(g, n);
-  JacobianType gg = gPROXY;
+  const Eigen::Map<const Eigen::VectorXd> xPROXY(x, n);
+  const InputType xx = xPROXY.cast<Scalar>();;
+  Eigen::Map<Eigen::VectorXd> gPROXY(g, n);
+  JacobianType gg = gPROXY.cast<Scalar>();
   ISolver<Func> * that = (ISolver<Func> *)instance;
   that->gradient(xx, gg);
-  gPROXY = gg;
+  gPROXY = gg.template cast<double>();
   return that->f(xx);
 }
 
@@ -55,15 +55,20 @@ template <typename Func>
 int
 ISolver<Func>::LineSearch(InputType & x,
                           const InputType & dx,
-                          double & f,
+                          Scalar & f,
                           JacobianType & g,
-                          double & step)
+                          Scalar & step)
 {
-  InputType xp = x;
+  Eigen::VectorXd xx = x.template cast<double>();
+  Eigen::VectorXd xp = x.template cast<double>();
+  Eigen::VectorXd dd = dx.template cast<double>();
   f = Func::f(x);
+  double ff = f;
+  double stepPROXY = step;
   this->gradient(x, g);
-  JacobianType gp = g;
-  InputType wp(x.rows());
+  Eigen::VectorXd gg = g.template cast<double>();
+  Eigen::VectorXd gp = g.template cast<double>();
+  Eigen::VectorXd wp(x.rows());
 
   /* Construct a callback data. */
   callback_data_t cd;
@@ -72,24 +77,31 @@ ISolver<Func>::LineSearch(InputType & x,
   cd.proc_evaluate = &ISolver<Func>::lbfgs_evaluate;
   cd.proc_progress = NULL;
 
-  return _linesearch(cd.n,
-                     x.data(),   /* current position */
-                     &f,         /* current function value @x */
-                     g.data(),   /* current function gradient @x */
-                     dx.data(),  /* search direction */
-                     &step,      /* step size - initial & final */
+  int ret;
+  ret = _linesearch(cd.n,
+                     xx.data(),  /* current position */
+                     &ff,        /* current function value @x */
+                     gg.data(),   /* current function gradient @x */
+                     dd.data(),  /* search direction (const) */
+                     &stepPROXY, /* step size - initial & final */
                      xp.data(),
-                     gp.data(),
-                     wp.data(),
+                     gp.data(),  /* (const) */
+                     wp.data(),  /* (const) */
                      &cd,
-                     &_param);
+                     &_param);   /* (const)  */
+  x = xx.cast<Scalar>();
+  f = ff;
+  g = gg.cast<Scalar>();
+  step = stepPROXY;
+  return ret;
 }
 
 template <typename Func>
-double ISolver<Func>::linesearch(const InputType & xp, const JacobianType & direction)
+typename ISolver<Func>::Scalar
+ISolver<Func>::linesearch(const InputType & xp, const JacobianType & direction)
 {
-  lbfgsfloatval_t step = 1.0;
-  lbfgsfloatval_t f;
+  Scalar step = 1.0;
+  Scalar f;
   InputType x = xp;
   JacobianType g(xp.rows());
   int status = LineSearch(x, direction, f, g, step);
@@ -101,18 +113,19 @@ double ISolver<Func>::linesearch(const InputType & xp, const JacobianType & dire
 }
 
 template <typename Func>
-double ISolver<Func>::linesearch2(const InputType & x, const JacobianType & direction)
+typename ISolver<Func>::Scalar
+ISolver<Func>::linesearch2(const InputType & x, const JacobianType & direction)
 {
-  const double alpha = 0.001; // c1
-  const double beta = 0.1;    // c2
-  double t = 1.0;
+  const Scalar alpha = 0.001; // c1
+  const Scalar beta = 0.1;    // c2
+  Scalar t = 1.0;
 
   InputType xx = x + t * direction;
-  double f = Func::f(xx);
-  const double f_in = f;
+  Scalar f = Func::f(xx);
+  const Scalar f_in = f;
   JacobianType grad(x.rows());
   this->gradient(x, grad);
-  const double Cache = alpha * grad.dot(direction);
+  const Scalar Cache = alpha * grad.dot(direction);
 
   while (f > f_in + t * Cache) {
     t *= beta;
@@ -124,19 +137,20 @@ double ISolver<Func>::linesearch2(const InputType & x, const JacobianType & dire
 }
 
 template <typename Func>
-double ISolver<Func>::linesearch(const InputType & x, const JacobianType & direction,
-                                 const Eigen::MatrixXd & hessian)
+typename ISolver<Func>::Scalar
+ISolver<Func>::linesearch(const InputType & x, const JacobianType & direction,
+                          const Eigen::MatrixXd & hessian)
 {
-    const double alpha = 0.2;
-    const double beta = 0.9;
-    double t = 1.0;
+    const Scalar alpha = 0.2;
+    const Scalar beta = 0.9;
+    Scalar t = 1.0;
 
     InputType xx = x + t * direction;
-    double f = Func::f(xx);
-    const double f_in = f;
+    Scalar f = Func::f(xx);
+    const Scalar f_in = f;
     JacobianType grad(x.rows());
     this->gradient(x, grad);
-    const double Cache = alpha * grad.dot(direction) + 0.5*alpha*direction.transpose()*(hessian*direction);
+    const Scalar Cache = alpha * grad.dot(direction) + 0.5*alpha*direction.transpose()*(hessian*direction);
 
     while(f > f_in + t * Cache)
     {

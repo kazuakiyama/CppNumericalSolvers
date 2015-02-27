@@ -24,17 +24,18 @@
 #define ISOLVER_H_
 
 #include <list>
-//#include <functional>
 #include "Meta.hpp"
 
 namespace pwie
 {
 
-typedef struct Options
+template <typename _Scalar>
+struct Options
 {
-  double gradTol;
-  double tol;
-  double rate;
+  typedef _Scalar Scalar;
+  Scalar gradTol;
+  Scalar tol;
+  Scalar rate;
   size_t maxIter;
   size_t m; // parameter for Lbfgs
   int verbosity;
@@ -50,7 +51,7 @@ typedef struct Options
     m = 10;
     verbosity = 0;
   }
-} Options;
+};
 
 #include "lbfgs.h"
 
@@ -72,18 +73,20 @@ private:
   inline InputType getUpperBound(int DIM, std::true_type) const {
     return Func::getUpperBound(DIM);
   }
+  // default bounds functions - basically unbounded
   inline InputType getLowerBound(int DIM, std::false_type) const {
-    return  -INF * InputType::Ones(DIM);
+    return -std::numeric_limits<Scalar>::max() * InputType::Ones(DIM);
   }
   inline InputType getUpperBound(int DIM, std::false_type) const {
-    return  INF * InputType::Ones(DIM);
+    return  std::numeric_limits<Scalar>::max() * InputType::Ones(DIM);
   }
   CREATE_MEMBER_FUNC_SIG_CHECK(getLowerBound, InputType (T::*)(int DIM) const, getLowerBound);
   CREATE_MEMBER_FUNC_SIG_CHECK(getUpperBound, InputType (T::*)(int DIM) const, getUpperBound);
 
-  // default step function does nothing
+  // default convergence function
   inline bool checkConverged(size_t iter, InputType & x, Scalar & step, InputType & dir,
-                             JacobianType & g, std::false_type) const {
+                             JacobianType & g, std::false_type) const
+  {
     (void)x;
     (void)step;
     (void)dir;
@@ -92,7 +95,8 @@ private:
     return g.template lpNorm<Eigen::Infinity>() < settings.tol;
   }
   inline bool checkConverged(int iter, InputType & x, Scalar & step, InputType & dir,
-                             JacobianType & g, std::true_type) const {
+                             JacobianType & g, std::true_type) const
+  {
     return Func::checkConverged(x, step, dir, g);
   }
   CREATE_MEMBER_FUNC_SIG_CHECK(checkConverged,
@@ -142,21 +146,21 @@ public:
                                          has_member_func_checkConverged<Func>());
   }
 
-  Options settings;
+  Options<Scalar> settings;
 
 protected:
 
   virtual void internalSolve(InputType & x0) = 0;
-  double linesearch(const InputType & x, const JacobianType & direction);
-  double linesearch(const InputType & x, const JacobianType & direction,
+  Scalar linesearch(const InputType & x, const JacobianType & direction);
+  Scalar linesearch(const InputType & x, const JacobianType & direction,
                     const Eigen::MatrixXd & hessian);
-  double linesearch2(const InputType & x, const JacobianType & direction);
+  Scalar linesearch2(const InputType & x, const JacobianType & direction);
 
   int LineSearch(InputType & x,
                  const InputType & dx,
-                 double & f,
+                 Scalar & f,
                  JacobianType & g,
-                 double & step);
+                 Scalar & step);
 
 private:
 
