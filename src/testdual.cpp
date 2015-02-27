@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 #include <iostream>
+#include <complex>
 #include <functional>
 #include <list>
 #include <Eigen/Dense>
@@ -8,154 +9,70 @@
 #include <unsupported/Eigen/MatrixFunctions>
 #include <unsupported/Eigen/DualNum>
 
-#define PRECISION (1e-9)
+#define PRECISION (1e-15)
+
+typedef std::complex<double> complexd;
+typedef std::complex<float> complexf;
 
 using namespace Eigen;
 
 TEST (DualTest, Construct)
 {
-  Matrix<double,1,1> M;
-  M << 1.1;
-  EXPECT_NEAR(M(0), 1.1, PRECISION);
-  EXPECT_EQ(M(0), 1.1);
+}
 
-  DualNum<double> x = 1.1;
-  EXPECT_EQ(x.realpart(), 1.1);
-  EXPECT_EQ(realpart(x), 1.1);
-  EXPECT_EQ(x.epart(), 0.0);
-  EXPECT_EQ(epart(x), 0.0);
-
-  DualNum<double> z(1.1);
-  EXPECT_EQ(z.realpart(), 1.1);
-  EXPECT_EQ(realpart(z), 1.1);
-  EXPECT_EQ(z.epart(), 0.0);
-  EXPECT_EQ(epart(z), 0.0);
-
-  DualNum<double> y(1.1, 2.2);
-  EXPECT_EQ(y.realpart(), 1.1);
-  EXPECT_EQ(realpart(y), 1.1);
-  EXPECT_EQ(y.epart(), 2.2);
-  EXPECT_EQ(epart(y), 2.2);
-
-  DualNum<double> w = {1.1, 2.2};
-  EXPECT_EQ(w.realpart(), 1.1);
-  EXPECT_EQ(w.epart(), 2.2);
-
-  DualNum<double> a{1.1, 2.2};
-  EXPECT_EQ(a.realpart(), 1.1);
-  EXPECT_EQ(a.epart(), 2.2);
+template <typename DUALTYPE, typename Scalar>
+void construct()
+{
+  Matrix<DUALTYPE,1,1> M;
+  M << (Scalar)1.1;
+  EXPECT_EQ(M(0), (Scalar)1.1);
 }
 
 template <typename DUALTYPE, typename Scalar>
 void equality()
 {
-  DUALTYPE d{1.1, 2.2};
-  DUALTYPE e{1.1, 2.2};
-  DUALTYPE f{1.1, 2.21};
-  DUALTYPE g{2.2, 2.21};
-  DUALTYPE h{-2.2, -2.21};
-  DUALTYPE j{3, 0};
-  DUALTYPE k{9, 6};
-  Matrix<DUALTYPE,1,1> a;
-  a << d;
-  EXPECT_EQ(a[0], d);
-  EXPECT_EQ(e, d);
-  EXPECT_EQ(e, f);
-  EXPECT_NE(f, g);
-  EXPECT_NE(f, h);
-  EXPECT_NE(f, (Scalar)1.2);
-  EXPECT_NE((Scalar)1.2, f);
-  EXPECT_EQ(a[0], (Scalar)1.1);
-  EXPECT_EQ((Scalar)1.1, a[0]);
-  EXPECT_EQ(pow(j,(Scalar)2.0), k);
-  EXPECT_EQ(sqrt(k), j);
-  EXPECT_EQ(abs(h), g);
-  EXPECT_EQ(abs(-h), g);
-  EXPECT_EQ(-abs(h), h);
-  EXPECT_EQ(abs(h), (Scalar)2.2);
-  EXPECT_EQ(+abs(h), (Scalar)2.2);
-  EXPECT_EQ(-abs(h), (Scalar)-2.2);
+  Matrix<DUALTYPE,2,2> a = Matrix<DUALTYPE,2,2>::Random();
+  Matrix<DUALTYPE,2,2> b = a;
+  EXPECT_EQ(a,b);
 }
 
 template <typename DUALTYPE, typename Scalar>
 void compare()
 {
-  DUALTYPE d{1.1, 2.2};
-  DUALTYPE e{1.1, 2.2};
-  DUALTYPE f{1.1, 2.21};
-  DUALTYPE g{2.2, 2.21};
-  DUALTYPE h{-2.2, -2.21};
-  DUALTYPE j{3, 0};
-  DUALTYPE k{9, 6};
   Matrix<DUALTYPE,1,1> a;
-  a << d;
-  EXPECT_GT((Scalar)1.2, a[0]);
-  EXPECT_GT(a[0],(Scalar)1.0);
-  EXPECT_GT(g,f);
-  EXPECT_LT((Scalar)1.0, a[0]);
-  EXPECT_LT(a[0],(Scalar)1.2);
-  EXPECT_LT(f,g);
-  EXPECT_LE(a[0],(Scalar)1.1);
-  EXPECT_LE((Scalar)1.1,a[0]);
-  EXPECT_LE(f,g);
-  EXPECT_LE(f,e);
-  EXPECT_GE(a[0],(Scalar)1.1);
-  EXPECT_GE((Scalar)1.1,a[0]);
-  EXPECT_GE(g,f);
-  EXPECT_GE(e,f);
-  EXPECT_TRUE(max(f,(Scalar)2.2) == (Scalar)2.2);
-  EXPECT_TRUE(max((Scalar)2.2,f) == (Scalar)2.2);
-  EXPECT_TRUE(min(f,(Scalar)2.2) == f);
-  EXPECT_TRUE(min((Scalar)2.2,f) == f);
-  EXPECT_TRUE(max(f,g) == g);
-  EXPECT_TRUE(max(g,f) == g);
-  EXPECT_TRUE(min(f,g) == f);
-  EXPECT_TRUE(min(g,f) == f);
-}
-
-TEST (Duald, Equality)
-{
-  equality<Duald, double>();
-  //compare<Duald, float>();
-}
-
-TEST (Duald, Comparison)
-{
-  compare<Duald, double>();
-  //compare<Duald, float>();
-}
-
-TEST (Dualf, Equality)
-{
-  equality<Dualf, float>();
-  //equality<Dualf, double>();
-}
-
-TEST (Dualf, Comparison)
-{
-  compare<Dualf, float>();
-  //compare<Dualf, double>();
-}
-
-TEST (Dualcd, Equality)
-{
-  equality<Dualcd, std::complex<double>>();
-  //equality<Dualcd, std::complex<float>>();
-}
-
-TEST (Dualcf, Equality)
-{
-  equality<Dualcf, std::complex<float>>();
-  //equality<Dualcd, std::complex<float>>();
-}
-
-TEST (Duald, Transcendental)
-{
   
 }
+
+template <typename DUALTYPE, typename Scalar>
+void transcendental()
+{
+  Matrix<DUALTYPE,1,1> a;
+  
+}
+
+template <typename DUALTYPE, typename Scalar>
+void arithmetic()
+{
+  Matrix<DUALTYPE,1,1> a;
+  
+}
+
+#define TESTFUNC(func) \
+  TEST (Duald, func) { func<Duald, double>(); } \
+  TEST (Dualf, func) { func<Dualf, float>(); } \
+  TEST (Dualcd, func) { func<Dualcd, complexd>(); } \
+  TEST (Dualdf, func) { func<Dualcf, complexf>(); }
+
+TESTFUNC(construct)
+TESTFUNC(equality)
+TESTFUNC(compare)
+TESTFUNC(arithmetic)
+TESTFUNC(transcendental)
 
 int main(int argc, char **argv)
 {
   ::testing::InitGoogleTest(&argc, argv);
+  std::cout.precision(20);
+  std::cerr.precision(20);
   return RUN_ALL_TESTS();
 }
