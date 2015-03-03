@@ -135,6 +135,7 @@ public:
   // calculate the gradient/jacobian using dual numbers
   void gradientDual(const InputType & x, JacobianType & grad) const {
     Scalar eps = sqrt(std::numeric_limits<Scalar>::epsilon());
+    std::cerr << "gDU, eps=" << eps << "\n";
     const size_t DIM = x.rows();
     JacobianType gg(DIM);
 #pragma omp parallel
@@ -159,6 +160,8 @@ public:
   void gradientFiniteDiff(const InputType & x, JacobianType & grad,
                           Scalar eps = sqrt(std::numeric_limits<Scalar>::epsilon())) const
   {
+    eps = sqrt(eps);
+    std::cerr << "gFD, eps=" << eps << "\n";
     const size_t DIM = x.rows();
     typename Func::JacobianType finite(DIM);
 #pragma omp parallel

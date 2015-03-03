@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 #include <iostream>
 #include <complex>
+#include <type_traits>
 #include <functional>
 #include <list>
 #include <Eigen/Dense>
@@ -33,14 +34,23 @@ void equality()
 {
   Matrix<DUALTYPE,2,2> a = Matrix<DUALTYPE,2,2>::Random();
   Matrix<DUALTYPE,2,2> b = a;
+  a = b * 1.0;
+  EXPECT_EQ(a,b);
+  a = 1.0 * b;
+  EXPECT_EQ(a,b);
+  b = 1.0 * b;
   EXPECT_EQ(a,b);
 }
 
 template <typename DUALTYPE, typename Scalar>
 void compare()
 {
-  Matrix<DUALTYPE,1,1> a;
-  
+  Matrix<DUALTYPE,2,2> a = Matrix<DUALTYPE,2,2>::Random();
+  Matrix<DUALTYPE,2,2> b = a;
+  a = b * 1.0;
+  a = 2.0 * b;
+  b = a / 2.0;
+  EXPECT_LT((a-b*2).norm(), std::numeric_limits<typename DUALTYPE::basic_value_type>::epsilon());
 }
 
 template <typename DUALTYPE, typename Scalar>
@@ -59,9 +69,11 @@ void arithmetic()
 
 #define TESTFUNC(func) \
   TEST (Duald, func) { func<Duald, double>(); } \
-  TEST (Dualf, func) { func<Dualf, float>(); } \
-  TEST (Dualcd, func) { func<Dualcd, complexd>(); } \
-  TEST (Dualdf, func) { func<Dualcf, complexf>(); }
+  TEST (Dualf, func) { func<Dualf, float>(); }
+
+//                                                  \
+//  TEST (Dualcd, func) { func<Dualcd, complexd>(); }   \
+//  TEST (Dualdf, func) { func<Dualcf, complexf>(); }
 
 TESTFUNC(construct)
 TESTFUNC(equality)

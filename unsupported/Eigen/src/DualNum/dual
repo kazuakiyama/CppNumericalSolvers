@@ -3,7 +3,7 @@
 // The MIT License (MIT)
 // 
 // Copyright (c) 2006 Jeffrey A. Fike
-// Copyright (C) 2015 Michael Tesch tesch a tum de
+// Copyright (C) 2015 Michael Tesch tesch1 a gmail com
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -26,13 +26,19 @@
 #ifndef LIB_CXXDUALX
 #define LIB_CXXDUALS 1
 
-//#include <bits/c++config.h>
-//#include <bits/cpp_type_traits.h>
-//#include <ext/type_traits.h>
 #include <cmath>
 #include <sstream>
 #include <complex>
 #include <limits>
+#include <type_traits>
+#include <initializer_list>
+
+// check if constexpr exists
+#if __cplusplus >= 201103L
+#define CXXDUALS_CONSTEXPR constexpr
+#else
+#define CXXDUALS_CONSTEXPR const
+#endif
 
 /* dual-numbers implementation for calculation of differentials */
 
@@ -49,6 +55,15 @@ typedef dual<long double> dualld;
 typedef dual<std::complex<float> > dualcf;
 typedef dual<std::complex<double> > dualcd;
 typedef dual<std::complex<long double> > dualcld;
+#if __cplusplus >= 201103L
+template <class _Tp> using hyperdual = dual<dual<_Tp> >;
+typedef hyperdual<float> hyperdualf;
+typedef hyperdual<double> hyperduald;
+typedef hyperdual<long double> hyperdualld;
+typedef hyperdual<std::complex<float> > hyperdualcf;
+typedef hyperdual<std::complex<double> > hyperdualcd;
+typedef hyperdual<std::complex<long double> > hyperdualcld;
+#endif
 
 #ifndef CXXDUALS_NO_LIMITS
 } // cxxduals
@@ -64,19 +79,38 @@ namespace cxxduals {
 #endif // CXXDUALS_NO_TYPEDEFS
 
 // useful type extraction
+template <typename _Tp>
+struct dual_traits_basic {
+  typedef _Tp scalar_type;
+  typedef _Tp value_type;
+  static const int depth = 0;
+  static const int num_elem = 1;
+  typedef std::false_type is_nested;
+  typedef std::false_type is_dual;
+};
 template <typename _Tp> struct dual_trait_helper;
-template <> struct dual_trait_helper<float> { typedef float scalar_type; };
-template <> struct dual_trait_helper<double> { typedef double scalar_type; };
-template <> struct dual_trait_helper<long double> { typedef long double scalar_type; };
-template <> struct dual_trait_helper<std::complex<float> > { typedef float scalar_type; };
-template <> struct dual_trait_helper<std::complex<double> > { typedef double scalar_type; };
-template <> struct dual_trait_helper<std::complex<long double> > { typedef long double scalar_type; };
-template <> struct dual_trait_helper<dualf> { typedef float scalar_type; };
-template <> struct dual_trait_helper<duald> { typedef double scalar_type; };
-template <> struct dual_trait_helper<dualld> { typedef long double scalar_type; };
-template <> struct dual_trait_helper<dualcf> { typedef float scalar_type; };
-template <> struct dual_trait_helper<dualcd> { typedef double scalar_type; };
-template <> struct dual_trait_helper<dualcld> { typedef long double scalar_type; };
+template <> struct dual_trait_helper<float> : public dual_traits_basic<float> {
+  typedef float scalar_type;
+};
+template <> struct dual_trait_helper<double> : public dual_traits_basic<double> {
+  typedef double scalar_type;
+};
+template <> struct dual_trait_helper<long double> : public dual_traits_basic<long double> {
+  typedef long double scalar_type;
+};
+template <typename _Tp>
+struct dual_trait_helper<std::complex<_Tp> > : public dual_traits_basic<_Tp> {
+  typedef std::complex<_Tp> value_type;
+};
+template <typename _Tp>
+struct dual_trait_helper<dual<_Tp> > : public dual_traits_basic<typename dual<_Tp>::scalar_type> {
+  typedef typename dual_trait_helper<_Tp>::scalar_type scalar_type;
+  typedef typename dual_trait_helper<_Tp>::value_type value_type;
+  static const int depth = dual_trait_helper<_Tp>::depth + 1;
+  static const int num_elem = dual_trait_helper<_Tp>::num_elem * 2;
+  typedef std::true_type is_dual;
+  typedef typename dual_trait_helper<_Tp>::is_dual is_nested;
+};
 
 // dual number class
 template <typename _Tp>
@@ -84,539 +118,800 @@ class dual {
 
 private:
   _Tp _f0, _f1;
-  
+
 public:
 
   typedef _Tp value_type;
-  typedef typename dual_trait_helper<dual<_Tp>>::scalar_type scalar_type;
-  // todo? - scalar type of value_type ?
+  typedef typename dual_trait_helper<_Tp>::value_type basic_value_type;
+  typedef typename dual_trait_helper<_Tp>::scalar_type scalar_type;
+  static const int depth = dual_trait_helper<dual<_Tp> >::depth;
+  static const int num_elem = dual_trait_helper<dual<_Tp> >::num_elem;
 
-  inline dual() : _f0(), _f1() {}
-  inline dual(const _Tp & f0) : _f0(f0), _f1() {}
-  inline dual(const _Tp & f0, const _Tp & f1) : _f0(f0), _f1(f1) {}
+  // Constructors
+  CXXDUALS_CONSTEXPR dual()
+    : _f0(), _f1() { }
+
+  template <typename _Up>
+  CXXDUALS_CONSTEXPR dual(const _Up & f0, const _Up & f1 = _Up())
+    : _f0(f0), _f1(f1) { }
+
+  template <typename _Up, typename _Vp>
+  CXXDUALS_CONSTEXPR dual(const _Up & f0, const _Vp & f1)
+    : _f0(f0), _f1(f1) { }
+
+  dual(std::initializer_list<basic_value_type> ll)
+    : _f0(), _f1()
+  {
+    if (ll.size() > num_elem)
+      throw std::exception();
+    int ii = 0;
+    for (auto it = ll.begin(); it != ll.end(); it++, ii++)
+      part(ii) = *it;
+  }
+
+  //CXXDUALS_CONSTEXPR dual(const scalar_type & f0)
+  //  : _f0(f0), _f1() { }
+
+  template<typename _Up>
+  explicit CXXDUALS_CONSTEXPR dual(const dual<_Up> & rhs)
+    : _f0(rhs.rpart()), _f1(rhs.ipart()) { }
+
+  /// Part extraction
+#if __cplusplus >= 201103L
+  constexpr _Tp 
+  rpart() const { return _f0; }
+
+  constexpr _Tp 
+  ipart() const { return _f1; }
+
+private:
+  constexpr basic_value_type
+  private_part(int p, std::false_type) {
+    // p had better be either 0 or 1
+    return p == 0 ? _f0 : _f1;
+  }
+  constexpr basic_value_type
+  private_part(int p, std::true_type) {
+    return p < (num_elem / 2)
+               ? _f0.part(p)
+               : _f1.part(p - (dual_trait_helper<dual<_Tp> >::num_elem / 2));
+  }
+public:
+  constexpr basic_value_type
+  part(int p) const {
+    return private_part(p, typename dual_trait_helper<_Tp>::is_dual());
+  }
+#else
+  inline const _Tp &
+  rpart() const { return _f0; }
+
+  inline const _Tp &
+  ipart() const { return _f1; }
+#endif
 
   inline _Tp &
-  realpart() { return _f0; }
-  
-  inline const _Tp &
-  realpart() const { return _f0; }
-  
-  inline void
-  realpart(_Tp f0) { _f0 = f0; }
-  
-  inline _Tp &
-  epart() { return _f1; }
-  
-  inline const _Tp &
-  epart() const { return _f1; }
-  
-  inline void
-  epart(_Tp f1) { _f1 = f1; }
+  rpart() { return _f0; }
 
-  // basic ops
+  inline _Tp &
+  ipart() { return _f1; }
+
+private:
+  inline basic_value_type &
+  private_part(int p, std::false_type) {
+    return p == 0 ? _f0 : _f1;
+  }
+  inline basic_value_type &
+  private_part(int p, std::true_type) {
+    return p < (num_elem / 2)
+               ? _f0.part(p)
+               : _f1.part(p - (dual_trait_helper<dual<_Tp> >::num_elem / 2));
+  }
+public:
+  inline basic_value_type &
+  part(int p) {
+    return private_part(p, typename dual_trait_helper<_Tp>::is_dual());
+  }
+
+  /// Part assignment
+  inline void
+  rpart(_Tp f0) { _f0 = f0; }
+
+  inline void
+  ipart(_Tp f1) { _f1 = f1; }
+
+private:
+  inline void
+  private_part(int p, const basic_value_type & v, std::false_type) {
+    return p == 0 ? _f0 : _f1;
+  }
+  inline void
+  private_part(int p, const basic_value_type & v, std::true_type) {
+    return p < (num_elem / 2)
+               ? _f0.part(p)
+               : _f1.part(p - (dual_trait_helper<dual<_Tp> >::num_elem / 2));
+  }
+public:
+  inline void
+  part(int p, const basic_value_type & v) {
+    return private_part(p, v, typename dual_trait_helper<_Tp>::is_dual());
+  }
+
+  /// Assignment
+#if 0
+  inline dual<_Tp> &
+  operator=(const _Tp & rhs) { _f0 = rhs; _f1 = _Tp(); return *this; }
+#endif
+  inline dual<_Tp> &
+  operator=(const dual<_Tp> & rhs) { _f0 = rhs._f0; _f1 = rhs._f1; return *this; }
+
+  template<typename _Up>
+  inline dual<_Tp> &
+  operator=(const dual<_Up> & rhs) { _f0 = rhs.rpart(); _f1 = rhs.ipart(); return *this; }
+
+  // Operations
+
+  /// unitary
   dual<_Tp>
   operator+() const { return *this; }
 
-  dual<_Tp>
-  operator+(const dual<_Tp> & rhs) const
-  {
-    return dual<_Tp>(_f0 + rhs._f0,
-                        _f1 + rhs._f1);
-  }
-
-  dual<_Tp>
-  operator-(const dual<_Tp> & rhs) const
-  {
-    return dual<_Tp>(_f0 - rhs._f0,
-                        _f1 - rhs._f1);
-  }
-
+  /// unitary negation
   dual<_Tp>
   operator-() const
   {
     return dual<_Tp>(-_f0, -_f1);
   }
 
-  dual<_Tp>
-  operator*(const dual<_Tp> & rhs) const
-  {
-    return dual<_Tp>(_f0 * rhs._f0,
-                     _f0 * rhs._f1 + _f1 * rhs._f0);
-  }
-
+  /// addition
   dual<_Tp> &
-  operator+=(const dual<_Tp> & rhs)
+  operator+=(const _Tp & rhs)
   {
-    _f0 += rhs._f0;
-    _f1 += rhs._f1;
+    _f0 += rhs;
     return *this;
   }
 
+  template<typename _Up>
   dual<_Tp> &
-  operator-=(const dual<_Tp> & rhs)
+  operator+=(const dual<_Up> & rhs)
   {
-    _f0 -= rhs._f0;
-    _f1 -= rhs._f1;
+    _f0 += rhs.rpart();
+    _f1 += rhs.ipart();
     return *this;
   }
 
+  /// subtraction
   dual<_Tp> &
-  operator*=(const dual<_Tp> & rhs)
+  operator-=(const _Tp & rhs)
   {
-    _Tp tf0, tf1;
-    _Tp rf0, rf1;
-    tf0 = _f0;
-    tf1 = _f1;
-    rf0 = rhs._f0;
-    rf1 = rhs._f1;
-    _f0 = tf0 * rf0;
-    _f1 = tf0 * rf1 + tf1 * rf0;
+    _f0 -= rhs;
     return *this;
   }
 
+  template<typename _Up>
   dual<_Tp> &
-  operator*=(_Tp rhs)
+  operator-=(const dual<_Up> & rhs)
+  {
+    _f0 -= rhs.rpart();
+    _f1 -= rhs.ipart();
+    return *this;
+  }
+
+  /// multiplication
+  dual<_Tp> &
+  operator*=(const _Tp & rhs)
   {
     _f0 *= rhs;
     _f1 *= rhs;
     return *this;
   }
 
+  template<typename _Up>
   dual<_Tp> &
-  operator/=(_Tp rhs)
+  operator*=(const dual<_Up> & rhs)
+  {
+    _Tp tf0, tf1;
+    _Tp rf0, rf1;
+    tf0 = _f0;
+    tf1 = _f1;
+    rf0 = rhs.rpart();
+    rf1 = rhs.ipart();
+    _f0 = tf0 * rf0;
+    _f1 = tf0 * rf1 + tf1 * rf0;
+    return *this;
+  }
+
+  /// division
+  dual<_Tp> &
+  operator/=(const _Tp & rhs)
   {
     _f0 /= rhs;
     _f1 /= rhs;
+    return *this;
+  }
+
+  template<typename _Up>
+  dual<_Tp> &
+  operator/=(const dual<_Up> & rhs)
+  {
+#if __cplusplus > 199711L
+    typedef decltype(_Tp(1) * _Up(1)) higher_t;
+#else
+    typedef _Tp higher_t;
+#endif
+#if 0
+    higher_t deriv;
+    deriv = higher_t(-1) * std::pow(higher_t(rhs.rpart()), higher_t(-2));
+    dual<higher_t> inv;
+    inv.rpart() = higher_t(1) / rhs.rpart();
+    inv.ipart() = rhs.ipart() * deriv;
+    *this *= inv;
+#else
+    dual<higher_t> tmp;
+    tmp.rpart() = _f0 / rhs.rpart();
+    tmp.ipart() = (_f1 * rhs.rpart() - _f0 * rhs.ipart()) / (rhs.rpart() * rhs.rpart());
+    *this = tmp;
+#endif
+    return *this;
   }
 
 };
 
-// function defs
-template <typename eeT>
-inline eeT
-realpart(const dual<eeT> & d)
+/// Value extraction
+//@{
+template <typename _Tp>
+inline _Tp
+rpart(const dual<_Tp> & d)
 {
-  return d.realpart();
+  return d.rpart();
 }
 
-template <typename eeT>
-inline eeT
-epart(const dual<eeT> & d)
+template <typename _Tp>
+inline _Tp
+ipart(const dual<_Tp> & d)
 {
-  return d.epart();
+  return d.ipart();
 }
+//@}
 
 // basic ops
-template <typename eeT>
-inline dual<eeT>
-operator+(const eeT lhs, const dual<eeT> rhs)
-{
-  return dual<eeT>(lhs) += rhs;
+#if 0
+#define DUALH_DEFINE_BASIC_OP_TEMPLATES(OP)                     \
+  template <typename _Tp>                                       \
+  inline dual<_Tp>                                              \
+  operator OP (const dual<_Tp> & lhs, const dual<_Tp> & rhs)    \
+  {                                                             \
+    dual<_Tp> d = lhs;                                          \
+    d OP##= rhs;                                                \
+    return d;                                                   \
+  }                                                             \
+  /* down one */                                                \
+  template <typename _Tp>                                       \
+  inline dual<_Tp>                                              \
+  operator OP(const dual<_Tp> & lhs, const _Tp & rhs)           \
+  {                                                             \
+    dual<_Tp> d = lhs;                                          \
+    d OP##= rhs;                                                \
+    return d;                                                   \
+  }                                                             \
+  template <typename _Tp>                                       \
+  inline dual<_Tp>                                              \
+  operator OP(const _Tp & lhs, const dual<_Tp> & rhs)           \
+  {                                                             \
+    dual<_Tp> d(lhs);                                           \
+    d OP##= rhs;                                                \
+    return d;                                                   \
+  }                                                             \
+  /* dual nesting */                                            \
+  template <typename _Tp>                                       \
+  inline dual<_Tp>                                              \
+  operator OP(const dual<_Tp> & lhs, const typename _Tp::value_type & rhs) \
+  {                                                             \
+    dual<_Tp> d(lhs);                                           \
+    d OP##= rhs;                                                \
+    return d;                                                   \
+  }                                                             \
+  template <typename _Tp>                                       \
+  inline dual<_Tp>                                              \
+  operator OP(const typename _Tp::value_type & lhs, const dual<_Tp> & rhs) \
+  {                                                             \
+    dual<_Tp> d(lhs);                                           \
+    d OP##= rhs;                                                \
+    return d;                                                   \
+  }
+#else
+/* the c++11 way - maybe when back porting to older c++ can get rid of result_type */
+namespace internal {
+// restrict op types to help template libs (ie Eigen) use dual<>
+template <typename _Tp, typename _Up> struct presult_type {};
+template <typename _Tp> struct presult_type<_Tp, int> {typedef dual<_Tp> type;};
+template <typename _Tp> struct presult_type<_Tp, unsigned> {typedef dual<_Tp> type;};
+template <typename _Tp> struct presult_type<_Tp, float> {typedef dual<_Tp> type;};
+template <typename _Tp> struct presult_type<_Tp, double> {typedef dual<_Tp> type;};
+template <typename _Tp> struct presult_type<_Tp, long double> {typedef dual<_Tp> type;};
+template <typename _Tp, typename _Up> struct presult_type<_Tp, std::complex<_Up> > {
+  typedef dual<_Tp> type;
+};
+template <typename _Tp, typename _Up> using result_type = presult_type<_Tp, _Up>;
 }
+#define DUALH_DEFINE_BASIC_OP_TEMPLATES(OP)                     \
+  template <typename _Tp>                                       \
+  inline dual<_Tp>                                              \
+  operator OP (const dual<_Tp> & lhs, const dual<_Tp> & rhs)    \
+  {                                                             \
+    dual<_Tp> d = lhs;                                          \
+    d OP##= rhs;                                                \
+    return d;                                                   \
+  }                                                             \
+  /* down one */                                                \
+  template <typename _Tp, typename _Up>                         \
+  inline typename internal::result_type<_Tp,_Up>::type          \
+  operator OP(const dual<_Tp> & lhs, const _Up & rhs)           \
+  {                                                             \
+    dual<_Tp> d = lhs;                                          \
+    d OP##= rhs;                                                \
+    return d;                                                   \
+  }                                                             \
+  template <typename _Tp, typename _Up>                         \
+  inline typename internal::result_type<_Tp,_Up>::type          \
+  operator OP(const _Up & lhs, const dual<_Tp> & rhs)           \
+  {                                                             \
+    dual<_Tp> d(lhs);                                           \
+    d OP##= rhs;                                                \
+    return d;                                                   \
+  }
+#endif
 
-template <typename eeT>
-inline dual<eeT>
-operator-(const eeT lhs, const dual<eeT> rhs)
-{
-  return dual<eeT>(lhs) -= rhs;
-}
+//@{
+///  Addition
+DUALH_DEFINE_BASIC_OP_TEMPLATES(+)
+//@}
 
-template <typename eeT>
-inline dual<eeT>
-operator*(const eeT lhs, const dual<eeT> rhs)
-{
-  return dual<eeT>(lhs) *= rhs;
-}
+//@{
+///  Subtraction
+DUALH_DEFINE_BASIC_OP_TEMPLATES(-)
+//@}
 
-template <typename eeT>
-inline dual<eeT>
-operator/(const dual<eeT> lhs, const dual<eeT> rhs)
-{
-  dual<eeT> temp = lhs;
-  return lhs /= rhs;
-}
+//@{
+///  Multiplication
+DUALH_DEFINE_BASIC_OP_TEMPLATES(*)
+//@}
 
-template <typename eeT>
-inline dual<eeT>
-operator/(const eeT lhs, const dual<eeT> rhs)
-{
-  return dual<eeT>(lhs) /= rhs;
-}
+//@{
+///  Division
+DUALH_DEFINE_BASIC_OP_TEMPLATES(/)
+//@}
 
-template <typename eeT>
-inline dual<eeT>
-operator/(const dual<eeT> lhs, const eeT rhs)
-{
-  dual<eeT> temp = lhs;
-  return temp /= rhs;
-}
+#undef DUALH_DEFINE_BASIC_OP_TEMPLATES
 
-// math.h functions
-template <typename _Tp>
+///
+#if 0
+// fix emacs auto formatting below this point for me
+  ;
+#endif
+
+template <typename _Tp, typename _Up>
 dual<_Tp>
-pow(const dual<_Tp> & x, _Tp a)
+pow(const dual<_Tp> & xx, const _Up & aa)
 {
+  using std::pow;
+  using std::abs;
+  using std::exp;
   dual<_Tp> temp;
+#if 0
   _Tp deriv, xval, tol;
-  xval = x.realpart();
-  tol = _Tp(1e-15); // TODO- should use type traits of _Tp instead of 1e-15
-  if (std::abs(xval) > 0 && std::abs(xval) < std::abs(tol)) {
-    xval = x.realpart() / (std::abs(x.realpart()) / tol);
+  xval = xx.rpart();
+  // TODO- should use numeric traits of _Tp instead of 1e-15
+  tol = _Tp(1e-15);
+  if (abs(xval) > 0 && abs(xval) < abs(tol)) {
+    xval = xx.rpart() / (abs(xx.rpart()) / tol);
     //if (xval >= 0)
     //  xval = tol;
     //if (xval < 0)
     //  xval = -tol;
   }
-  deriv = a * std::pow(xval, (a - _Tp(1.0)));
-  temp.realpart() = std::pow(x.realpart(), a);  //Use actual x value, only use tol for derivs
-  temp.epart() = x.epart() * deriv;
+  deriv = aa * pow(xval, (aa - _Tp(1.0)));
+  temp.rpart() = pow(xx.rpart(), aa);  //Use actual x value, only use tol for derivs
+  temp.ipart() = xx.ipart() * deriv;
+#else
+  //return exp(xx * dual<_Tp>(log(aa)));
+  temp.rpart() = pow(xx.rpart(), aa);
+  temp.ipart() = xx.ipart() * aa * pow(xx.rpart(), aa - _Up(1));
+#endif
   return temp;
 }
+#if 1
+template <typename _Tp>
+dual<_Tp>
+pow(const _Tp & aa, const dual<_Tp> & xx)
+{
+  using std::pow;
+  using std::log;
+  using std::exp;
+#if 0
+  return exp(xx * log(aa));
+#else
+  dual<_Tp> temp;
+  temp.rpart() = pow(aa, xx.rpart());
+  temp.ipart() = xx.ipart() * pow(aa, xx.rpart()) * log(aa);
+  return temp;
+#endif
+}
 
-//template <typename eeT> dual<eeT> pow(dual<eeT> x, dual<eeT> a) {
+template <typename _Tp>
+dual<_Tp>
+pow(const dual<_Tp> & xx, const dual<_Tp> & yy)
+{
+  using std::log;
+  using std::exp;
+  return exp(yy * log(xx));
+}
+#endif
+//template <typename _Tp> dual<_Tp> pow(dual<_Tp> x, dual<_Tp> a) {
 //
 //}
 
-template <typename eeT>
-dual<eeT> exp(dual<eeT> x)
+template <typename _Tp>
+dual<_Tp>
+exp(const dual<_Tp> & x)
 {
-  eeT deriv;
-  deriv = std::exp(x.realpart());
-  return dual<eeT>(deriv, deriv * x.epart());
+  using std::exp;
+  _Tp deriv;
+  deriv = exp(x.rpart());
+  return dual<_Tp>(deriv, deriv * x.ipart());
 }
 
-template <typename eeT>
-dual<eeT>
-log(dual<eeT> x)
+template <typename _Tp>
+dual<_Tp>
+log(dual<_Tp> x)
 {
-  eeT deriv1;
-  deriv1 = x.epart() / x.realpart();
-  return dual<eeT>(log(x.realpart()), deriv1);
+  using std::log;
+  _Tp deriv1;
+  deriv1 = x.ipart() / x.rpart();
+  return dual<_Tp>(log(x.rpart()), deriv1);
 }
 
-template <typename eeT>
-dual<eeT>
-sin(dual<eeT> x)
+template <typename _Tp>
+dual<_Tp>
+sin(dual<_Tp> x)
 {
-  dual<eeT> temp;
-  eeT funval, deriv;
-  funval = sin(x.realpart());
-  deriv = cos(x.realpart());
-  temp.realpart() = funval;
-  temp.epart() = deriv * x.epart();
+  using std::sin;
+  using std::cos;
+  dual<_Tp> temp;
+  _Tp funval, deriv;
+  funval = sin(x.rpart());
+  deriv = cos(x.rpart());
+  temp.rpart() = funval;
+  temp.ipart() = deriv * x.ipart();
   return temp;
 }
 
-template <typename eeT>
-dual<eeT>
-cos(dual<eeT> x)
+template <typename _Tp>
+dual<_Tp>
+cos(dual<_Tp> x)
 {
-  dual<eeT> temp;
-  eeT funval, deriv;
-  funval = cos(x.realpart());
-  deriv = -sin(x.realpart());
-  temp.realpart() = funval;
-  temp.epart() = deriv * x.epart();
+  using std::sin;
+  using std::cos;
+  dual<_Tp> temp;
+  _Tp funval, deriv;
+  funval = cos(x.rpart());
+  deriv = -sin(x.rpart());
+  temp.rpart() = funval;
+  temp.ipart() = deriv * x.ipart();
   return temp;
 }
 
-template <typename eeT>
-dual<eeT>
-tan(dual<eeT> x)
+template <typename _Tp>
+dual<_Tp>
+tan(dual<_Tp> x)
 {
-  dual<eeT> temp;
-  eeT funval, deriv;
-  funval = tan(x.realpart());
+  dual<_Tp> temp;
+  _Tp funval, deriv;
+  funval = tan(x.rpart());
   deriv  = funval*funval + 1.0;
-  temp.realpart() = funval;
-  temp.epart() = deriv*x.epart();
+  temp.rpart() = funval;
+  temp.ipart() = deriv*x.ipart();
   return temp;
 }
 
-template <typename eeT>
-dual<eeT>
-asin(dual<eeT> x)
+template <typename _Tp>
+dual<_Tp>
+asin(dual<_Tp> x)
 {
-  dual<eeT> temp;
-  eeT funval, deriv1, deriv;
-  funval = asin(x.realpart());
-  deriv1 = 1.0-x.realpart()*x.realpart();
+  using std::asin;
+  using std::sqrt;
+  dual<_Tp> temp;
+  _Tp funval, deriv1, deriv;
+  funval = asin(x.rpart());
+  deriv1 = 1.0-x.rpart()*x.rpart();
   deriv = 1.0/sqrt(deriv1);
-  temp.realpart() = funval;
-  temp.epart() = deriv*x.epart();
+  temp.rpart() = funval;
+  temp.ipart() = deriv*x.ipart();
   return temp;
 }
 
 #if 0
-template <typename eeT>
-dual<eeT>
-acos(dual<eeT> x)
+template <typename _Tp>
+dual<_Tp>
+acos(dual<_Tp> x)
 {
-  dual<eeT> temp;
-  eeT funval, deriv1, deriv;
-  funval = acos(x.realpart());
-  deriv1 = 1.0 - x.realpart() * x.realpart();
+  using std::acos;
+  using std::sqrt;
+  dual<_Tp> temp;
+  _Tp funval, deriv1, deriv;
+  funval = acos(x.rpart());
+  deriv1 = 1.0 - x.rpart() * x.rpart();
   deriv = 1.0 / sqrt(deriv1);
-  temp.realpart() = funval;
-  temp.epart() = deriv*x.epart();
+  temp.rpart() = funval;
+  temp.ipart() = deriv*x.ipart();
   return temp;
 }
 #endif
 
-template <typename eeT>
-dual<eeT>
-atan(dual<eeT> x)
+template <typename _Tp>
+dual<_Tp>
+atan(dual<_Tp> x)
 {
-  dual<eeT> temp;
-  eeT funval, deriv1, deriv;
-  funval = atan(x.realpart());
-  deriv1 = 1.0 + x.realpart() * x.realpart();
+  using std::atan;
+  dual<_Tp> temp;
+  _Tp funval, deriv1, deriv;
+  funval = atan(x.rpart());
+  deriv1 = 1.0 + x.rpart() * x.rpart();
   deriv = 1.0 / deriv1;
-  temp.realpart() = funval;
-  temp.epart() = deriv * x.epart();
+  temp.rpart() = funval;
+  temp.ipart() = deriv * x.ipart();
   return temp;
 }
 
-template <typename eeT>
-dual<eeT>
-atan2(dual<eeT> y, dual<eeT> x)
+template <typename _Tp>
+dual<_Tp>
+atan2(dual<_Tp> y, dual<_Tp> x)
 {
-  dual<eeT> temp;
-  eeT funval, deriv1, deriv;
-  funval = atan2(y.realpart(), x.realpart());
+  using std::atan2;
+  dual<_Tp> temp;
+  _Tp funval, deriv1, deriv;
+  funval = atan2(y.rpart(), x.rpart());
   // unsure from here on...
-  deriv1 = 1.0 + x.realpart() * x.realpart();
+  deriv1 = 1.0 + x.rpart() * x.rpart();
   deriv = 1.0 / deriv1;
-  temp.realpart() = funval;
-  temp.epart() = deriv * x.epart();
+  temp.rpart() = funval;
+  temp.ipart() = deriv * x.ipart();
   return temp;
 }
 
-template <typename eeT>
-dual<eeT>
-sqrt(dual<eeT> x)
+template <typename _Tp>
+dual<_Tp>
+sqrt(dual<_Tp> x)
 {
-  return pow(x, (eeT)0.5);
+  using std::pow;
+  return pow(x, _Tp(0.5));
 }
 
-template <typename eeT>
-dual<eeT>
-max(dual<eeT> x1, dual<eeT> x2)
+template <typename _Tp>
+dual<_Tp>
+max(dual<_Tp> x1, dual<_Tp> x2)
 {
-  return x1.realpart() >= x2.realpart() ? x1 : x2;
+  return x1.rpart() >= x2.rpart() ? x1 : x2;
 }
 
-template <typename eeT>
-dual<eeT>
-max(dual<eeT> x1, eeT x2)
+template <typename _Tp>
+dual<_Tp>
+max(dual<_Tp> x1, _Tp x2)
 {
-  return x1.realpart() >= x2 ? x1 : dual<eeT>(x2);
+  return x1.rpart() >= x2 ? x1 : dual<_Tp>(x2);
 }
 
-template <typename eeT>
-dual<eeT>
-max(eeT x1, dual<eeT> x2)
+template <typename _Tp>
+dual<_Tp>
+max(_Tp x1, dual<_Tp> x2)
 {
-  return x1 >= x2.realpart() ? dual<eeT>(x1) : x2;
+  return x1 >= x2.rpart() ? dual<_Tp>(x1) : x2;
 }
 
-template <typename eeT>
-dual<eeT>
-min(dual<eeT> x1, dual<eeT> x2)
+template <typename _Tp>
+dual<_Tp>
+min(dual<_Tp> x1, dual<_Tp> x2)
 {
-  return x1.realpart() <= x2.realpart() ? x1 : x2;
+  return x1.rpart() <= x2.rpart() ? x1 : x2;
 }
 
-template <typename eeT>
-dual<eeT>
-min(dual<eeT> x1, eeT x2)
+template <typename _Tp>
+dual<_Tp>
+min(dual<_Tp> x1, _Tp x2)
 {
-  return x1.realpart() <= x2 ? x1 : dual<eeT>(x2);
+  return x1.rpart() <= x2 ? x1 : dual<_Tp>(x2);
 }
 
-template <typename eeT>
-dual<eeT>
-min(eeT x1, dual<eeT> x2)
+template <typename _Tp>
+dual<_Tp>
+min(_Tp x1, dual<_Tp> x2)
 {
-  return x1 <= x2.realpart() ? dual<eeT>(x1) : x2;
+  return x1 <= x2.rpart() ? dual<_Tp>(x1) : x2;
 }
 
-template <typename eeT>
-dual<eeT>
-conj(const dual<eeT> & x)
-{
-  return dual<eeT>(conj(x.realpart()), conj(x.epart()));
-}
-
-template <typename eeT>
-dual<eeT>
-real(const dual<eeT> & x)
+#if 0
+template <typename _Tp>
+dual<_Tp>
+conj(const dual<_Tp> & x)
 {
   // todo - dont just make things up
-  return dual<eeT>(real(x.realpart()), real(x.epart()));
+  return dual<_Tp>(conj(x.rpart()), conj(x.ipart()));
 }
+#endif
 
-template <typename eeT>
-dual<eeT>
-imag(const dual<eeT> & x)
+template <typename _Tp>
+dual<_Tp>
+real(const dual<_Tp> & x)
 {
   // todo - dont just make things up
-  return dual<eeT>(imag(x.realpart()), imag(x.epart()));
+  return dual<_Tp>(real(x.rpart()), real(x.ipart()));
 }
 
-template <typename eeT>
-inline dual<eeT>
-abs(const dual<eeT> & x)
+template <typename _Tp>
+dual<_Tp>
+imag(const dual<_Tp> & x)
 {
+  // todo - dont just make things up
+  return dual<_Tp>(imag(x.rpart()), imag(x.ipart()));
+}
+
+template <typename _Tp>
+inline dual<_Tp>
+abs(const dual<_Tp> & x)
+{
+  using std::abs;
   // wrong for complex
-  return std::abs(x.realpart()) == x.realpart() ? x : -x;
+  return abs(x.rpart()) == x.rpart() ? x : -x;
 }
 
-template <typename eeT>
-dual<eeT>
-abs2(const dual<eeT> & x)
+template <typename _Tp>
+dual<_Tp>
+abs2(const dual<_Tp> & x)
 {
   return x * x;
 }
 
 /// comparison
-template <typename eeT>
+template <typename _Tp>
 inline bool
-operator>(dual<eeT> lhs, dual<eeT> rhs)
+operator>(dual<_Tp> lhs, dual<_Tp> rhs)
 {
-  return lhs.realpart() > rhs.realpart();
+  return lhs.rpart() > rhs.rpart();
 }
 
-template <typename eeT>
+template <typename _Tp>
 inline bool
-operator>(eeT lhs, dual<eeT> rhs)
+operator>(_Tp lhs, dual<_Tp> rhs)
 {
-  return lhs > rhs.realpart();
+  return lhs > rhs.rpart();
 }
 
-template <typename eeT>
+template <typename _Tp>
 inline bool
-operator>(dual<eeT> lhs, eeT rhs)
+operator>(dual<_Tp> lhs, _Tp rhs)
 {
-  return lhs.realpart() > rhs;
+  return lhs.rpart() > rhs;
 }
 
-template <typename eeT>
+template <typename _Tp>
 inline bool
-operator>=(dual<eeT> lhs, dual<eeT> rhs)
+operator>=(dual<_Tp> lhs, dual<_Tp> rhs)
 {
-  return lhs.realpart() >= rhs.realpart();
+  return lhs.rpart() >= rhs.rpart();
 }
 
-template <typename eeT>
+template <typename _Tp>
 inline bool
-operator>=(eeT lhs, dual<eeT> rhs)
+operator>=(_Tp lhs, dual<_Tp> rhs)
 {
-  return lhs >= rhs.realpart();
+  return lhs >= rhs.rpart();
 }
 
-template <typename eeT>
+template <typename _Tp>
 inline bool
-operator>=(dual<eeT> lhs, eeT rhs)
+operator>=(dual<_Tp> lhs, _Tp rhs)
 {
-  return lhs.realpart() >= rhs;
+  return lhs.rpart() >= rhs;
 }
 
-template <typename eeT>
+template <typename _Tp>
 inline bool
-operator<(dual<eeT> lhs, dual<eeT> rhs)
+operator<(dual<_Tp> lhs, dual<_Tp> rhs)
 {
-  return lhs.realpart() < rhs.realpart();
+  return lhs.rpart() < rhs.rpart();
 }
 
-template <typename eeT>
+template <typename _Tp>
 inline bool
-operator<(eeT lhs, dual<eeT> rhs)
+operator<(_Tp lhs, dual<_Tp> rhs)
 {
-  return lhs < rhs.realpart();
+  return lhs < rhs.rpart();
 }
 
-template <typename eeT>
+template <typename _Tp>
 inline bool
-operator<(dual<eeT> lhs, eeT rhs)
+operator<(dual<_Tp> lhs, _Tp rhs)
 {
-  return lhs.realpart() < rhs;
+  return lhs.rpart() < rhs;
 }
 
-template <typename eeT>
+template <typename _Tp>
 inline bool
-operator<=(dual<eeT> lhs, dual<eeT> rhs)
+operator<=(dual<_Tp> lhs, dual<_Tp> rhs)
 {
-  return lhs.realpart() <= rhs.realpart();
+  return lhs.rpart() <= rhs.rpart();
 }
 
-template <typename eeT>
+template <typename _Tp>
 inline bool
-operator<=(eeT lhs, dual<eeT> rhs)
+operator<=(_Tp lhs, dual<_Tp> rhs)
 {
-  return lhs <= rhs.realpart();
+  return lhs <= rhs.rpart();
 }
 
-template <typename eeT>
+template <typename _Tp>
 inline bool
-operator<=(dual<eeT> lhs, eeT rhs)
+operator<=(dual<_Tp> lhs, _Tp rhs)
 {
-  return lhs.realpart() <= rhs;
+  return lhs.rpart() <= rhs;
 }
 
-template <typename eeT>
+template <typename _Tp>
 inline bool
-operator==(dual<eeT> lhs, dual<eeT> rhs)
+operator==(dual<_Tp> lhs, dual<_Tp> rhs)
 {
-  return lhs.realpart() == rhs.realpart();
+  return lhs.rpart() == rhs.rpart();
 }
 
-template <typename eeT>
+template <typename _Tp>
 inline bool
-operator==(eeT lhs, dual<eeT> rhs)
+operator==(_Tp lhs, dual<_Tp> rhs)
 {
-  return lhs == rhs.realpart();
+  return lhs == rhs.rpart();
 }
 
-template <typename eeT>
+template <typename _Tp>
 inline bool
-operator==(dual<eeT> lhs, eeT rhs)
+operator==(dual<_Tp> lhs, _Tp rhs)
 {
-  return lhs.realpart() == rhs;
+  return lhs.rpart() == rhs;
 }
 
-template <typename eeT>
+template <typename _Tp>
 inline bool
-operator!=(dual<eeT> lhs, dual<eeT> rhs)
+operator!=(dual<_Tp> lhs, dual<_Tp> rhs)
 {
-  return lhs.realpart() != rhs.realpart();
+  return lhs.rpart() != rhs.rpart();
 }
 
-template <typename eeT>
+template <typename _Tp>
 inline bool
-operator!=(eeT lhs, dual<eeT> rhs)
+operator!=(_Tp lhs, dual<_Tp> rhs)
 {
-  return lhs != rhs.realpart();
+  return lhs != rhs.rpart();
 }
 
-template <typename eeT>
+template <typename _Tp>
 inline bool
-operator!=(dual<eeT> lhs, eeT rhs)
+operator!=(dual<_Tp> lhs, _Tp rhs)
 {
-  return lhs.realpart() != rhs;
+  return lhs.rpart() != rhs;
 }
-
+#if 0
+// TODO: group parts by e-index better
+#else
 template<typename _Tp, typename _CharT, class _Traits>
 std::basic_ostream<_CharT, _Traits>&
-operator<<(std::basic_ostream<_CharT, _Traits>& __os, const dual<_Tp>& rhs)
+operator<<(std::basic_ostream<_CharT, _Traits>& os, const dual<_Tp>& rhs)
 {
-  std::basic_ostringstream<_CharT, _Traits> __s;
-  __s.flags(__os.flags());
-  __s.imbue(__os.getloc());
-  __s.precision(__os.precision());
-  __s << "(" << rhs.realpart() << " + e*" << rhs.epart() << ")";
-  return __os << __s.str();
+  std::basic_ostringstream<_CharT, _Traits> s;
+  s.flags(os.flags());
+  s.imbue(os.getloc());
+  s.precision(os.precision());
+  s << "(" << rhs.rpart()
+    << " + e" << dual_trait_helper<dual<_Tp> >::depth << "*" << rhs.ipart()
+    << ")";
+  return os << s.str();
 }
+#endif
 
 } // namespace cxxduals
 

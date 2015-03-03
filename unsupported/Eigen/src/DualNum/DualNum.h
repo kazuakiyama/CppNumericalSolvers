@@ -26,9 +26,12 @@ namespace Eigen {
 template<typename _Scalar>
 struct NumTraits<DualNum<_Scalar> > : GenericNumTraits<_Scalar>
 {
-  typedef _Scalar Scalar;
+  typedef DualNum<_Scalar> Scalar;
+  typedef DualNum<_Scalar> Real;
+  typedef DualNum<_Scalar> NonInteger;
+  typedef DualNum<_Scalar> Nested;
   enum {
-    IsInteger = std::numeric_limits<Scalar>::is_signed,
+    IsInteger = 0,
     IsSigned = std::numeric_limits<Scalar>::is_signed,
     IsComplex = NumTraits< _Scalar >::IsComplex,
     RequireInitialization = NumTraits<Scalar>::RequireInitialization,
