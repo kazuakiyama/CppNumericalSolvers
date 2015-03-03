@@ -23,6 +23,7 @@ template <class eT> using DualNum = cxxduals::dual<eT>;
 
 #include <Eigen/Core>
 namespace Eigen {
+
 template<typename _Scalar>
 struct NumTraits<DualNum<_Scalar> > : GenericNumTraits<_Scalar>
 {
