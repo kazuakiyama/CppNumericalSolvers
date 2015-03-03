@@ -16,9 +16,22 @@ typedef std::complex<double> complexd;
 typedef std::complex<float> complexf;
 
 using namespace Eigen;
+using namespace cxxduals;
+
+#if 0
+template <typename _Tp> _Tp random();
+template <> dual<std::complex<float> > random<dual<std::complex<float> > >() {
+  return dual<std::complex<float> >({(float)drand48(), (float)drand48()});
+}
+template <> dual<std::complex<double> > random<dual<std::complex<double> > >() {
+  std::complex<double> cx(drand48(), drand48());
+  return dual<std::complex<double> >(cx);
+}
+#endif
 
 TEST (DualTest, Construct)
 {
+  dual<double> a;
 }
 
 template <typename DUALTYPE, typename Scalar>
@@ -41,28 +54,35 @@ void construct()
 template <typename DUALTYPE, typename Scalar>
 void equality()
 {
-  Matrix<DUALTYPE,2,2> a = Matrix<DUALTYPE,2,2>::Random();
+  Matrix<DUALTYPE,2,2> a(Matrix<DUALTYPE,2,2>::Ones());
   Matrix<DUALTYPE,2,2> b = a;
+  Matrix<DUALTYPE,2,2> c = Matrix<DUALTYPE,2,2>::Identity();
   a = b * 1.0;
+  EXPECT_EQ(a,b);
+  a = b * c;
   EXPECT_EQ(a,b);
   a = 1.0 * b;
   EXPECT_EQ(a,b);
   b = 1.0 * b;
   EXPECT_EQ(a,b);
-  b = Matrix<DUALTYPE,2,2>::Random();
+  b = Matrix<DUALTYPE,2,2>::Zero();
   EXPECT_NE(a,b);
+  a.setZero();
+  EXPECT_EQ(a,b);
 }
 
 template <typename DUALTYPE, typename Scalar>
 void compare()
 {
+  using std::abs;
   Matrix<DUALTYPE,2,2> a = Matrix<DUALTYPE,2,2>::Random();
   Matrix<DUALTYPE,2,2> b = a;
   Matrix<DUALTYPE,2,2> c = a;
   a = b * 1.0;
   a = 2.0 * b;
   b = a / 2.0;
-  EXPECT_LT((a-b*2).norm(), std::numeric_limits<typename DUALTYPE::basic_value_type>::epsilon());
+  EXPECT_LT(abs((a-b*2).norm()), 
+            abs(std::numeric_limits<typename DUALTYPE::basic_value_type>::epsilon()));
   a = b + c;
   a = b * 2.0;
   a = 2.0 * b;
@@ -85,17 +105,19 @@ void arithmetic()
   
 }
 
-#define TESTFUNC(func) \
+#define TESTFUNC_REAL(func) \
   TEST (Duald, func) { func<Duald, double>(); } \
   TEST (Dualf, func) { func<Dualf, float>(); }
 
-//                                                  \
-//  TEST (Dualcd, func) { func<Dualcd, complexd>(); }   \
-//  TEST (Dualdf, func) { func<Dualcf, complexf>(); }
+#define TESTFUNC(func) \
+  TEST (Duald, func) { func<Duald, double>(); } \
+  TEST (Dualf, func) { func<Dualf, float>(); } \
+  TEST (Dualcd, func) { func<Dualcd, complexd>(); } \
+  TEST (Dualdf, func) { func<Dualcf, complexf>(); }
 
 TESTFUNC(construct)
 TESTFUNC(equality)
-TESTFUNC(compare)
+TESTFUNC_REAL(compare)
 TESTFUNC(arithmetic)
 TESTFUNC(transcendental)
 
