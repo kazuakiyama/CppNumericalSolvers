@@ -63,8 +63,8 @@ ISolver<Func>::LineSearch(InputType & x,
   Eigen::VectorXd xp = x.template cast<double>();
   Eigen::VectorXd dd = dx.template cast<double>();
   f = Func::f(x);
-  double ff = f;
-  double stepPROXY = step;
+  double ff = (double)f;
+  double stepPROXY = (double)step;
   this->gradient(x, g);
   Eigen::VectorXd gg = g.template cast<double>();
   Eigen::VectorXd gp = g.template cast<double>();

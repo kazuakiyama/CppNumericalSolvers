@@ -27,29 +27,29 @@ namespace Eigen {
 template<typename _Scalar>
 struct NumTraits<DualNum<_Scalar> > : GenericNumTraits<_Scalar>
 {
-  typedef DualNum<_Scalar> Scalar;
+  //typedef DualNum<_Scalar> Scalar;
   typedef DualNum<_Scalar> Real;
   typedef DualNum<_Scalar> NonInteger;
   typedef DualNum<_Scalar> Nested;
   enum {
     IsInteger = 0,
-    IsSigned = std::numeric_limits<Scalar>::is_signed,
+    IsSigned = std::numeric_limits<_Scalar>::is_signed,
     IsComplex = NumTraits< _Scalar >::IsComplex,
-    RequireInitialization = NumTraits<Scalar>::RequireInitialization,
-    ReadCost = 2 * NumTraits<Scalar>::ReadCost,
-    AddCost = 2 * NumTraits<Scalar>::AddCost,
-    MulCost = 4 * NumTraits<Scalar>::MulCost + 2 * NumTraits<Scalar>::AddCost
+    RequireInitialization = NumTraits<_Scalar>::RequireInitialization,
+    ReadCost = 2 * NumTraits<_Scalar>::ReadCost,
+    AddCost = 2 * NumTraits<_Scalar>::AddCost,
+    MulCost = 4 * NumTraits<_Scalar>::MulCost + 2 * NumTraits<_Scalar>::AddCost
   };
 
-  static inline Scalar epsilon() { return NumTraits<Scalar>::epsilon(); }
-  static inline Scalar dummy_precision() { return NumTraits<Scalar>::dummy_precision(); }
+  static inline Real epsilon() { return dual<_Scalar>(NumTraits<_Scalar>::epsilon()); }
+  static inline Real dummy_precision() { return dual<_Scalar>(NumTraits<_Scalar>::dummy_precision()); }
 };
 
 namespace internal {
 
 template<typename T> struct scalar_product_traits<T, DualNum<T> > {
   enum {
-    // Cost = 2*NumTraits<T>::MulCost,
+    Cost = 2*NumTraits<T>::MulCost,
     Defined = 1
   };
   typedef DualNum<T> ReturnType;
@@ -57,10 +57,19 @@ template<typename T> struct scalar_product_traits<T, DualNum<T> > {
 
 template<typename T> struct scalar_product_traits<DualNum<T>, T> {
   enum {
-    // Cost = 2*NumTraits<T>::MulCost,
+    Cost = 2*NumTraits<T>::MulCost,
     Defined = 1
   };
   typedef DualNum<T> ReturnType;
+};
+
+// Eigen needs this to print
+template <typename _Tp>
+struct cast_impl<DualNum<_Tp>, int>
+{
+  static inline int run(const DualNum<_Tp> & x) {
+    return int(x.part(0));
+  }
 };
 
 } // namespace internal
