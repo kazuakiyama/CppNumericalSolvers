@@ -67,8 +67,8 @@ public:
     InputType upper = getUpperBound(n);
 
     for (Index i = 0; i < n; i++) {
-      x_l[i] = lower[i];
-      x_u[i] = upper[i];
+      x_l[i] = (Number)lower[i];
+      x_u[i] = (Number)upper[i];
     }
 
 #if 0
@@ -105,7 +105,7 @@ public:
     Eigen::Map<const InputType> xmap(x, n);
     // TODO: change objective function argument to accept MatrixBase, get rid of xx, pass xmap
     InputType xx = xmap;
-    obj_value = this->f(xx);
+    obj_value = (Number)this->f(xx);
     return true;
   }
 

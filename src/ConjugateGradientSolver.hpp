@@ -31,6 +31,7 @@ template <typename Func>
 class ConjugateGradientSolver : public ISolver<Func>
 {
 private:
+    typedef typename Func::Scalar Scalar;
     typedef typename Func::InputType InputType;
     typedef typename Func::JacobianType JacobianType;
     using ISolver<Func>::settings;
