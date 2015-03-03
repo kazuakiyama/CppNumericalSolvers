@@ -48,7 +48,7 @@ lbfgsfloatval_t ISolver<Func>::lbfgs_evaluate(void *instance,
   ISolver<Func> * that = (ISolver<Func> *)instance;
   that->gradient(xx, gg);
   gPROXY = gg.template cast<double>();
-  return that->f(xx);
+  return (lbfgsfloatval_t)that->f(xx);
 }
 
 template <typename Func>

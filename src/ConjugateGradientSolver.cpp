@@ -51,7 +51,7 @@ ConjugateGradientSolver<Func>::internalSolve(InputType & x)
     if (iter==0){
       Si = -grad;
     } else {
-      double beta;
+      Scalar beta;
       // fletcher-reeves
       beta = grad.dot(grad)/(grad_old.dot(grad_old));
       // polak ribiere
@@ -64,7 +64,7 @@ ConjugateGradientSolver<Func>::internalSolve(InputType & x)
       Si = -grad + beta*Si_old;
     }
 
-    const double rate = this->linesearch(x, Si);
+    const Scalar rate = this->linesearch(x, Si);
 
     x = x + rate * Si;
 

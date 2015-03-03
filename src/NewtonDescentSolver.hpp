@@ -29,6 +29,7 @@ namespace pwie
 template <typename Func>
 class NewtonDescentSolver : public ISolver<Func>
 {
+    typedef typename Func::Scalar Scalar;
     typedef typename Func::InputType InputType;
     typedef typename Func::JacobianType JacobianType;
     typedef typename Functor<Func>::HessianType HessianType;

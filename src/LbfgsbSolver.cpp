@@ -389,12 +389,13 @@ LbfgsbSolver<Func>::internalSolve(InputType & x0)
 
         Scalar ttt;
         ttt = f_old - f;
-        Debug("--> " << std::abs(ttt));
-        if(std::abs(ttt) < 1e-13)
+        using std::abs;
+        Debug("--> " << abs(ttt));
+        if(abs(ttt) < 1e-13)
         {
             // successive function values too similar
           if (no_improve_count++ > 10) {
-            std::cout << "no improvement, norm=" << std::abs(ttt) << "\n";
+            std::cout << "no improvement, norm=" << abs(ttt) << "\n";
             break;
           }
         }

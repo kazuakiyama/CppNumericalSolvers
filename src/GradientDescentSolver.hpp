@@ -29,6 +29,7 @@ namespace pwie
 template <typename Func>
 class GradientDescentSolver : public ISolver<Func>
 {
+    typedef typename Func::Scalar Scalar;
     typedef typename Func::InputType InputType;
     typedef typename Func::JacobianType JacobianType;
     using ISolver<Func>::settings;

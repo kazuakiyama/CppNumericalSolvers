@@ -58,7 +58,7 @@ static double myvalue(asa_objective *asa)
 {
   Eigen::Map<Eigen::VectorXd> x(asa->x, asa->n);
   typename FUNCTOR::InputType xx = x.cast<typename FUNCTOR::InputType::Scalar>();
-  return Global<FUNCTOR>::get()->f(xx);
+  return (double)Global<FUNCTOR>::get()->f(xx);
 }
 
 template <typename FUNCTOR>
@@ -81,7 +81,7 @@ double myvalgrad(asa_objective *asa)
   Global<FUNCTOR>::get()->gradient(typename FUNCTOR::InputType(xx), grad);
   Eigen::Map<Eigen::VectorXd> g(asa->g, asa->n);
   g = grad.template cast<double>();
-  return Global<FUNCTOR>::get()->f(typename FUNCTOR::InputType(xx));
+  return (double)Global<FUNCTOR>::get()->f(typename FUNCTOR::InputType(xx));
 }
 
 template <typename Func>
@@ -119,7 +119,7 @@ AsaCgSolver<Func>::internalSolve(InputType & x0)
     Global<Functor<Func> >::get() = this;
     asa_cg(x.data(), lo.data(), hi.data(),
            DIM, NULL, &cgParm, &asaParm,
-           settings.gradTol, /* grad_tol */
+           (double)settings.gradTol, /* grad_tol */
            &myvalue<Functor<Func> >,
            &mygrad<Functor<Func> >,
            &myvalgrad<Functor<Func> >,
