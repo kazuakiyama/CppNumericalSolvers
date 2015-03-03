@@ -27,6 +27,15 @@ void construct()
   Matrix<DUALTYPE,1,1> M;
   M << (Scalar)1.1;
   EXPECT_EQ(M(0), (Scalar)1.1);
+
+  bool IsInteger = NumTraits<DUALTYPE>::IsInteger;
+  bool IsSigned = NumTraits<DUALTYPE>::IsSigned;
+  bool IsComplex = NumTraits<DUALTYPE>::IsComplex;
+  bool RequireInitialization = NumTraits<DUALTYPE>::RequireInitialization;
+  bool ReadCost = NumTraits<DUALTYPE>::ReadCost;
+  bool AddCost = NumTraits<DUALTYPE>::AddCost;
+  bool MulCost = NumTraits<DUALTYPE>::MulCost;
+  std::cout << IsInteger << IsComplex << IsSigned << RequireInitialization << ReadCost << AddCost << MulCost;
 }
 
 template <typename DUALTYPE, typename Scalar>
@@ -40,6 +49,8 @@ void equality()
   EXPECT_EQ(a,b);
   b = 1.0 * b;
   EXPECT_EQ(a,b);
+  b = Matrix<DUALTYPE,2,2>::Random();
+  EXPECT_NE(a,b);
 }
 
 template <typename DUALTYPE, typename Scalar>
@@ -47,10 +58,17 @@ void compare()
 {
   Matrix<DUALTYPE,2,2> a = Matrix<DUALTYPE,2,2>::Random();
   Matrix<DUALTYPE,2,2> b = a;
+  Matrix<DUALTYPE,2,2> c = a;
   a = b * 1.0;
   a = 2.0 * b;
   b = a / 2.0;
   EXPECT_LT((a-b*2).norm(), std::numeric_limits<typename DUALTYPE::basic_value_type>::epsilon());
+  a = b + c;
+  a = b * 2.0;
+  a = 2.0 * b;
+  a = b - c;
+  a = b * c;
+  a = b / 2;
 }
 
 template <typename DUALTYPE, typename Scalar>
