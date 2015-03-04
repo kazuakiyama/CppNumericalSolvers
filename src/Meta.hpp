@@ -30,6 +30,8 @@
 #include <stdexcept>
 #include <unsupported/Eigen/DualNum>
 
+#define USE_COMPLEX_DUAL
+
 namespace pwie
 {
 
@@ -68,8 +70,11 @@ template<typename Func>
 class Functor : public Func {
 public:
   typedef typename Func::Scalar Scalar;
-  //typedef std::complex<Scalar> DualScalar; // todo: use actual dual numbers
+#ifdef USE_COMPLEX_DUAL
+  typedef std::complex<Scalar> DualScalar; // todo: use actual dual numbers
+#else
   typedef Eigen::DualNum<Scalar> DualScalar;
+#endif
   enum {
     InputDim = Func::InputsAtCompileTime,
     ValueDim = Func::ValuesAtCompileTime
@@ -142,7 +147,7 @@ public:
       DualInputType xx = x.template cast<DualScalar>();
 #pragma omp for
       for (size_t i = 0; i < DIM; i++) {
-#if 0
+#ifdef USE_COMPLEX_DUAL
         xx[i] += DualScalar(0, eps);
         gg[i] = imag(Func::f(xx)) / eps;
 #else

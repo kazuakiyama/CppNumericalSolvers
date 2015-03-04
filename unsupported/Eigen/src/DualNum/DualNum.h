@@ -27,22 +27,22 @@ namespace Eigen {
 template<typename _Scalar>
 struct NumTraits<DualNum<_Scalar> > : GenericNumTraits<_Scalar>
 {
-  //typedef DualNum<_Scalar> Scalar;
   typedef DualNum<_Scalar> Real;
   typedef DualNum<_Scalar> NonInteger;
   typedef DualNum<_Scalar> Nested;
+
   enum {
-    IsInteger = 0,
-    IsSigned = std::numeric_limits<_Scalar>::is_signed,
-    IsComplex = NumTraits< _Scalar >::IsComplex,
+    IsInteger           = 0,
+    IsSigned            =   NumTraits<_Scalar>::IsSigned,
+    IsComplex           =   NumTraits<_Scalar>::IsComplex,
     RequireInitialization = NumTraits<_Scalar>::RequireInitialization,
-    ReadCost = 2 * NumTraits<_Scalar>::ReadCost,
-    AddCost = 2 * NumTraits<_Scalar>::AddCost,
-    MulCost = 4 * NumTraits<_Scalar>::MulCost + 2 * NumTraits<_Scalar>::AddCost
+    ReadCost            = 2 * NumTraits<_Scalar>::ReadCost,
+    AddCost             = 2 * NumTraits<_Scalar>::AddCost,
+    MulCost             = 4 * NumTraits<_Scalar>::MulCost + 2 * NumTraits<_Scalar>::AddCost
   };
 
-  static inline Real epsilon() { return dual<_Scalar>(NumTraits<_Scalar>::epsilon()); }
-  static inline Real dummy_precision() { return dual<_Scalar>(NumTraits<_Scalar>::dummy_precision()); }
+  static inline Real epsilon()          { return Real(NumTraits<_Scalar>::epsilon()); }
+  static inline Real dummy_precision()  { return Real(NumTraits<_Scalar>::dummy_precision()); }
 };
 
 namespace internal {
@@ -61,6 +61,16 @@ template<typename T> struct scalar_product_traits<DualNum<T>, T> {
     Defined = 1
   };
   typedef DualNum<T> ReturnType;
+};
+
+template <typename _Tp>
+struct conj_helper<DualNum<_Tp>, _Tp, false, false>
+{
+  EIGEN_STRONG_INLINE DualNum<_Tp> pmadd(const DualNum<_Tp> & x, const DualNum<_Tp> & y, const DualNum<_Tp>& c) const
+  { return x * y + c; }
+
+  EIGEN_STRONG_INLINE DualNum<_Tp> pmul(const DualNum<_Tp> & a, const DualNum<_Tp> & b) const
+  { return a * b; }
 };
 
 // Eigen needs this to print

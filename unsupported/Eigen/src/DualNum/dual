@@ -789,7 +789,9 @@ dual<_Tp>
 conj(const dual<_Tp> & x)
 {
   // todo - dont just make things up
-  return dual<_Tp>(conj(x.rpart()), conj(x.ipart()));
+  using std::conj;
+  return dual<_Tp>(conj(x.rpart()),
+                   conj(x.ipart()));
 }
 #endif
 
@@ -798,7 +800,8 @@ dual<_Tp>
 real(const dual<_Tp> & x)
 {
   // todo - dont just make things up
-  return dual<_Tp>(real(x.rpart()), real(x.ipart()));
+  return dual<_Tp>(real(x.rpart()),
+                   real(x.ipart()));
 }
 
 template <typename _Tp>
