@@ -12,8 +12,9 @@
 
 #define PRECISION (1e-15)
 
-typedef std::complex<double> complexd;
 typedef std::complex<float> complexf;
+typedef std::complex<double> complexd;
+typedef std::complex<long double> complexld;
 
 using namespace Eigen;
 using namespace cxxduals;
@@ -45,10 +46,15 @@ void construct()
   bool IsSigned = NumTraits<DUALTYPE>::IsSigned;
   bool IsComplex = NumTraits<DUALTYPE>::IsComplex;
   bool RequireInitialization = NumTraits<DUALTYPE>::RequireInitialization;
-  bool ReadCost = NumTraits<DUALTYPE>::ReadCost;
-  bool AddCost = NumTraits<DUALTYPE>::AddCost;
-  bool MulCost = NumTraits<DUALTYPE>::MulCost;
-  std::cout << IsInteger << IsComplex << IsSigned << RequireInitialization << ReadCost << AddCost << MulCost;
+  int ReadCost = NumTraits<DUALTYPE>::ReadCost;
+  int AddCost = NumTraits<DUALTYPE>::AddCost;
+  int MulCost = NumTraits<DUALTYPE>::MulCost;
+  std::stringstream s;
+  s << "ICSR" << IsInteger << IsComplex << IsSigned << RequireInitialization
+    << "R" << ReadCost
+    << "A" << AddCost
+    << "M" << MulCost;
+  //std::cout << s.str() << "\n";
 }
 
 template <typename DUALTYPE, typename Scalar>
@@ -105,21 +111,47 @@ void arithmetic()
   
 }
 
+template <typename T1, typename T2>
+void casting()
+{
+  typedef Matrix<DualNum<T1>, 2, 2> dt1;
+  typedef Matrix<DualNum<T2>, 2, 2> dt2;
+  dt1 m1 = dt1::Zero();
+  dt1 m1p = dt1::Ones();
+  dt2 m2 = dt2::Ones();
+  m1 = m2.template cast<DualNum<T1> >();
+  EXPECT_TRUE(m1 == m1p);
+  m2 = dt2::Identity();
+  m1p = dt1::Identity();
+  m1 = m2.template cast<DualNum<T1> >();
+  EXPECT_TRUE(m1 == m1p);
+}
+
 #define TESTFUNC_REAL(func) \
+  TEST (Dualf, func) { func<Dualf, float>(); } \
   TEST (Duald, func) { func<Duald, double>(); } \
-  TEST (Dualf, func) { func<Dualf, float>(); }
+  TEST (Dualld, func) { func<Dualld, long double>(); }
 
 #define TESTFUNC(func) \
-  TEST (Duald, func) { func<Duald, double>(); } \
   TEST (Dualf, func) { func<Dualf, float>(); } \
+  TEST (Duald, func) { func<Duald, double>(); } \
+  TEST (Dualld, func) { func<Dualld, long double>(); } \
+  TEST (Dualcf, func) { func<Dualcf, complexf>(); } \
   TEST (Dualcd, func) { func<Dualcd, complexd>(); } \
-  TEST (Dualdf, func) { func<Dualcf, complexf>(); }
+  TEST (Dualcld, func) { func<Dualcld, complexld>(); }
+
+#define TEST_INTER_TYPE(func) \
+  TEST (float_double, func) { func<float,double>(); } \
+  TEST (double_float, func) { func<double,float>(); } \
+  TEST (Duald_Dualf, func) { func<Duald,Dualf>(); }
 
 TESTFUNC(construct)
 TESTFUNC(equality)
 TESTFUNC_REAL(compare)
 TESTFUNC(arithmetic)
 TESTFUNC(transcendental)
+
+TEST_INTER_TYPE(casting)
 
 int main(int argc, char **argv)
 {

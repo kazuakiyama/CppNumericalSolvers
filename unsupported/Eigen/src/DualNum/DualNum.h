@@ -66,7 +66,8 @@ template<typename T> struct scalar_product_traits<DualNum<T>, T> {
 template <typename _Tp>
 struct conj_helper<DualNum<_Tp>, _Tp, false, false>
 {
-  EIGEN_STRONG_INLINE DualNum<_Tp> pmadd(const DualNum<_Tp> & x, const DualNum<_Tp> & y, const DualNum<_Tp>& c) const
+  EIGEN_STRONG_INLINE DualNum<_Tp> pmadd(const DualNum<_Tp> & x, const DualNum<_Tp> & y,
+                                         const DualNum<_Tp>& c) const
   { return x * y + c; }
 
   EIGEN_STRONG_INLINE DualNum<_Tp> pmul(const DualNum<_Tp> & a, const DualNum<_Tp> & b) const
