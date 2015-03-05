@@ -390,6 +390,13 @@ rpart(const dual<_Tp> & d)
 
 template <typename _Tp>
 inline _Tp
+rpart(const _Tp & d)
+{
+  return d;
+}
+
+template <typename _Tp>
+inline _Tp
 ipart(const dual<_Tp> & d)
 {
   return d.ipart();
