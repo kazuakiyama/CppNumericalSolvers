@@ -117,22 +117,29 @@ public:
   }
 
   // double-check the gradient computation (using either finite-differences or dual numbers)
-  Scalar checkGradient(const InputType & x) const {
+  Scalar checkGradient(const InputType & x,
+                       JacobianType * Pgrad = NULL,
+                       JacobianType * PgradD = NULL) const
+  {
     const size_t DIM = x.rows();
-    JacobianType grad(DIM), gradD(DIM), gradFD(DIM);
+    JacobianType grad(DIM), gradD(DIM);
     Func::gradient(x, grad);
     gradientDual(x, gradD);
-    size_t row, col;
     JacobianType diff = (gradD - grad);
     //Scalar error = diff.norm();
+    size_t row, col;
     Scalar error = diff.cwiseAbs().maxCoeff(&row, &col);
     if (error > sqrt(std::numeric_limits<Scalar>::epsilon())) {
-      gradientFiniteDiff(x, gradFD);
       std::cerr << "(checkGradient error)=" << error
-                << "(" << row << "," << col << ") "
-        "g=" << grad(row,col) << " gD=" << gradD(row,col) << " gFD=" << gradFD(row,col)
+                << "|error|=" << diff.norm()
+                << " @(" << row << "," << col << ") "
+        "g=" << grad(row,col) << " gD=" << gradD(row,col)
                 << "\n";
     }
+    if (Pgrad)
+      *Pgrad = grad;
+    if (PgradD)
+      *PgradD = gradD;
     return error;
   }
 
