@@ -17,6 +17,10 @@ namespace Eigen {
 
 namespace internal {
 
+#define MATIO_MAJOR_VERSION 1
+#define MATIO_MINOR_VERSION 3
+#define MATIO_RELEASE_LEVEL 4
+
 template <typename Tp> struct matio_type;
 //template <> struct matio_type<xxx> { typedef xxx type; enum { id = MAT_T_UNKNOWN }; }; 
 //template <> struct matio_type<xxx> { typedef xxx type; enum { id = MAT_T_INT8 }; }; 
