@@ -131,9 +131,9 @@ public:
     Scalar error = diff.cwiseAbs().maxCoeff(&row, &col);
     if (error > sqrt(std::numeric_limits<Scalar>::epsilon())) {
       std::cerr << "(checkGradient error)=" << error
-                << "|error|=" << diff.norm()
-                << " @(" << row << "," << col << ") "
-        "g=" << grad(row,col) << " gD=" << gradD(row,col)
+                << " ||error||=" << diff.norm()
+                << " @(" << row << "," << col << ")\n"
+                << " *** g=" << grad(row,col) << " gD=" << gradD(row,col)
                 << "\n";
     }
     if (Pgrad)
