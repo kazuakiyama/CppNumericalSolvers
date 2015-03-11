@@ -17,54 +17,12 @@ namespace Eigen {
 
 namespace internal {
 
-#define MATIO_MAJOR_VERSION 1
-#define MATIO_MINOR_VERSION 3
-#define MATIO_RELEASE_LEVEL 4
-
 template <typename Tp> struct matio_type;
-//template <> struct matio_type<xxx> { typedef xxx type; enum { id = MAT_T_UNKNOWN }; }; 
-//template <> struct matio_type<xxx> { typedef xxx type; enum { id = MAT_T_INT8 }; }; 
-//template <> struct matio_type<xxx> { typedef xxx type; enum { id = MAT_T_UINT8 }; }; 
-//template <> struct matio_type<xxx> { typedef xxx type; enum { id = MAT_T_INT16 }; }; 
-//template <> struct matio_type<xxx> { typedef xxx type; enum { id = MAT_T_UINT16 }; }; 
-//template <> struct matio_type<xxx> { typedef xxx type; enum { id = MAT_T_INT32 }; }; 
-//template <> struct matio_type<xxx> { typedef xxx type; enum { id = MAT_T_UINT32 }; }; 
-//template <> struct matio_type<xxx> { typedef xxx type; enum { id = MAT_T_SINGLE }; }; 
-template <> struct matio_type<double> { typedef double type; static const matio_types id = MAT_T_DOUBLE; }; 
-//template <> struct matio_type<xxx> { typedef xxx type; enum { id = MAT_T_INT64 }; }; 
-//template <> struct matio_type<xxx> { typedef xxx type; enum { id = MAT_T_UINT64 }; }; 
-//template <> struct matio_type<xxx> { typedef xxx type; enum { id = MAT_T_MATRIX }; }; 
-//template <> struct matio_type<xxx> { typedef xxx type; enum { id = MAT_T_COMPRESSED }; }; 
-//template <> struct matio_type<xxx> { typedef xxx type; enum { id = MAT_T_UTF8 }; }; 
-//template <> struct matio_type<xxx> { typedef xxx type; enum { id = MAT_T_UTF16 }; }; 
-//template <> struct matio_type<xxx> { typedef xxx type; enum { id = MAT_T_UTF32 }; }; 
-//template <> struct matio_type<xxx> { typedef xxx type; enum { id = MAT_T_STRING }; }; 
-//template <> struct matio_type<xxx> { typedef xxx type; enum { id = MAT_T_CELL }; }; 
-//template <> struct matio_type<xxx> { typedef xxx type; enum { id = MAT_T_STRUCT }; }; 
-//template <> struct matio_type<xxx> { typedef xxx type; enum { id = MAT_T_ARRAY }; }; 
-//template <> struct matio_type<xxx> { typedef xxx type; enum { id = MAT_T_FUNCTION }; }; 
-
 template <typename Tp> struct matio_class;
-//template <> struct matio_class<xxx> { enum { id = MAT_C_CELL }; }; 
-//template <> struct matio_class<xxx> { enum { id = MAT_C_STRUCT }; }; 
-//template <> struct matio_class<xxx> { enum { id = MAT_C_OBJECT }; }; 
-//template <> struct matio_class<xxx> { enum { id = MAT_C_CHAR }; }; 
-//template <> struct matio_class<xxx> { enum { id = MAT_C_SPARSE }; }; 
+template <> struct matio_type<double> { typedef double type; static const matio_types id = MAT_T_DOUBLE; };
 template <> struct matio_class<double> { static const matio_classes id = MAT_C_DOUBLE; }; 
-//template <> struct matio_class<xxx> { enum { id = MAT_C_SINGLE }; }; 
-//template <> struct matio_class<xxx> { enum { id = MAT_C_INT8 }; }; 
-//template <> struct matio_class<xxx> { enum { id = MAT_C_UINT8 }; }; 
-//template <> struct matio_class<xxx> { enum { id = MAT_C_INT16 }; }; 
-//template <> struct matio_class<xxx> { enum { id = MAT_C_UINT16 }; }; 
-//template <> struct matio_class<xxx> { enum { id = MAT_C_INT32 }; }; 
-//template <> struct matio_class<xxx> { enum { id = MAT_C_UINT32 }; }; 
-//template <> struct matio_class<xxx> { enum { id = MAT_C_INT64 }; }; 
-//template <> struct matio_class<xxx> { enum { id = MAT_C_UINT64 }; }; 
-//template <> struct matio_class<xxx> { enum { id = MAT_C_FUNCTION }; }; 
 template <typename Tp> struct matio_flag { static const matio_flags id = (matio_flags)0; };
 template <typename Tp> struct matio_flag<std::complex<Tp> > { static const matio_flags id = MAT_F_COMPLEX; }; 
-//template <> struct matio_flag<xxx> { enum { id = MAT_F_GLOBAL }; }; 
-//template <> struct matio_flag<xxx> { enum { id = MAT_F_LOGICAL }; }; 
 
 }
 
@@ -72,50 +30,69 @@ template <class Matrix>
 bool
 write_mat(const char * filename, const char * matname, const Matrix & matrix)
 {
+  typedef typename internal::matio_type<typename Matrix:: Scalar>::type mat_type;
+#if MATIO_VERSION >= 150
+  enum matio_compression compression = MAT_COMPRESSION_NONE;
+#else
+  // version 134
   enum matio_compression compression = COMPRESSION_NONE;
-  int rows = matrix.rows();
-  int cols = matrix.cols();
+#endif
   mat_t * file;
   matvar_t * var;
   int status;
+#if MATIO_VERSION >= 150
+  size_t rows = matrix.rows();
+  size_t cols = matrix.cols();
+  size_t dims[2] = {rows, cols};
+#else
+  int rows = matrix.rows();
+  int cols = matrix.cols();
   int dims[2] = {rows, cols};
+#endif
 
-  typedef typename internal::matio_type<typename Matrix:: Scalar>::type mat_type;
   enum matio_types typei = internal::matio_type<typename Matrix:: Scalar>::id;
   matio_classes classid = internal::matio_class<typename Matrix:: Scalar>::id;
   matio_flags cxflag = internal::matio_flag<typename Matrix:: Scalar>::id;
 
-  file = Mat_Open(filename, MAT_ACC_RDWR);
+  file = Mat_CreateVer(filename, "tesch", MAT_FT_DEFAULT);
+//file = Mat_Open(filename, MAT_ACC_RDWR);
   if (NULL == file) {
     std::cout << "write_mat() unable to open " << filename << "\n";
     return false;
   }
 
-  var = Mat_VarCreate(matname, classid, typei, 2, dims, NULL, cxflag);
+  void * data;
+  Eigen::Matrix<mat_type,Eigen::Dynamic,Eigen::Dynamic> dst_re(rows, cols);
+  Eigen::Matrix<mat_type,Eigen::Dynamic,Eigen::Dynamic> dst_im(rows, cols);
+#if MATIO_VERSION >= 150
+  mat_complex_split_t cs;
+#else
+  ComplexSplit cs;
+#endif
+
+  if (cxflag == MAT_F_COMPLEX) {
+    dst_re = matrix.real().template cast<mat_type>();
+    dst_im = matrix.imag().template cast<mat_type>();
+    data = &cs;
+    cs.Re = dst_re.data();
+    cs.Im = dst_im.data();
+  }
+  else {
+    dst_re = matrix.real().template cast<mat_type>();
+    data = dst_re.data();
+  }
+
+  var = Mat_VarCreate(matname, classid, typei, 2, dims, data, cxflag);
   if (NULL == var) {
     Mat_Close(file);
     std::cout << "write_mat() unable to create matrix\n";
     return false;
   }
 
-  mat_type * dst_re;
-  mat_type * dst_im;
-
-  if (cxflag == MAT_F_COMPLEX) {
-    dst_re = (mat_type *)((struct ComplexSplit *)var->data)->Re;
-    dst_im = (mat_type *)((struct ComplexSplit *)var->data)->Im;
+  if (!var->data) {
+    std::cout << "BAD\n";
+    return 0;
   }
-  else {
-    dst_re = (mat_type *)var->data;
-  }
-
-  for (int jj = 0; jj < rows; jj++)
-    for (int ii = 0; ii < cols; ii++) {
-      int kk = ii + jj * cols;
-      dst_re[kk] = matrix.real()(jj,ii);
-      if (cxflag == MAT_F_COMPLEX)
-        dst_im[kk] = matrix.imag()(jj,ii);
-    }
 
   status = Mat_VarWrite(file, var, compression);
   if (status) {
