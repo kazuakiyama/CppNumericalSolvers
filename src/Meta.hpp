@@ -145,8 +145,13 @@ public:
 
   // calculate the gradient/jacobian using dual numbers
   void gradientDual(const InputType & x, JacobianType & grad) const {
-    Scalar eps = sqrt(std::numeric_limits<Scalar>::epsilon());
+#ifdef USE_COMPLEX_DUAL
+    DualScalar eps(0, sqrt(std::numeric_limits<Scalar>::epsilon()));
     std::cerr << "gDU, eps=" << eps << "\n";
+#else
+    DualScalar eps(0, 1.0);
+    std::cerr << "gDU, eps=" << eps << "\n";
+#endif
     const size_t DIM = x.rows();
     JacobianType gg(DIM);
 #pragma omp parallel
@@ -154,12 +159,11 @@ public:
       DualInputType xx = x.template cast<DualScalar>();
 #pragma omp for
       for (size_t i = 0; i < DIM; i++) {
+        xx[i] += eps;
 #ifdef USE_COMPLEX_DUAL
-        xx[i] += DualScalar(0, eps);
-        gg[i] = imag(Func::f(xx)) / eps;
+        gg[i] = imag(Func::f(xx)) / imag(eps);
 #else
-        xx[i] += DualScalar(0, 1.0);
-        gg[i] = Func::f(xx).ipart();
+        gg[i] = Func::f(xx).epart();
 #endif
         xx[i] = x[i];
       }
