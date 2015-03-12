@@ -160,27 +160,27 @@ public:
   }
 
 private:
-  CREATE_MEMBER_FUNC_SIG_CHECK(constraintDim, size_t (T::*)() const, constraintDim);
-  inline size_t constraintDim(std::true_type) const {
+  CREATE_MEMBER_FUNC_SIG_CHECK(constraintDim, int (T::*)() const, constraintDim);
+  inline int constraintDim(std::true_type) const {
     return _func.constraintDim();
   }
-  inline size_t constraintDim(std::false_type) const {
+  inline int constraintDim(std::false_type) const {
     return 0;
   }
 public:
-  virtual inline size_t constraintDim() const {
+  virtual inline int constraintDim() const {
     return constraintDim(has_member_func_constraintDim<Func>());
   }
 private:
-  CREATE_MEMBER_FUNC_SIG_CHECK(inputDim, size_t (T::*)() const, inputDim);
-  inline size_t inputDim(std::true_type) const {
+  CREATE_MEMBER_FUNC_SIG_CHECK(inputDim, int (T::*)() const, inputDim);
+  inline int inputDim(std::true_type) const {
     return _func.inputDim();
   }
-  inline size_t inputDim(std::false_type) const {
+  inline int inputDim(std::false_type) const {
     return 0;
   }
 public:
-  virtual inline size_t inputDim() const {
+  virtual inline int inputDim() const {
     return inputDim(has_member_func_inputDim<Func>());
   }
 
