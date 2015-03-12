@@ -29,14 +29,17 @@ namespace pwie
 template <typename Func>
 class NewtonDescentSolver : public ISolver<Func>
 {
-    typedef typename Func::Scalar Scalar;
-    typedef typename Func::InputType InputType;
-    typedef typename Func::JacobianType JacobianType;
-    typedef typename Functor<Func>::HessianType HessianType;
-    using ISolver<Func>::settings;
+  typedef typename Func::Scalar Scalar;
+  typedef typename Func::InputType InputType;
+  typedef typename Func::JacobianType JacobianType;
+  typedef typename Functor<Func>::HessianType HessianType;
+
+  using ISolver<Func>::settings;
+  using ISolver<Func>::_functor;
+
 public:
-    NewtonDescentSolver();
-    void internalSolve(InputType & x0);
+  NewtonDescentSolver(const Func & func);
+  void internalSolve(InputType & x0);
 };
 
 } /* namespace pwie */

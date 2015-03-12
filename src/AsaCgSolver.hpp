@@ -35,14 +35,17 @@ class AsaCgSolver : public ISolver<Func>
   typedef typename Func::JacobianType JacobianType;
   typedef typename ISolver<Func>::HessianType HessianType;
 
-  InputType _upper;
-  InputType _lower;
+  InputType _ub;
+  InputType _lb;
   using ISolver<Func>::settings;
+  using ISolver<Func>::_functor;
+
+  // for our globals callback hack
+  typedef const Functor<Func> FunctorGlobalType;
 
 public:
-  AsaCgSolver();
+  AsaCgSolver(const Func & func);
   virtual ~AsaCgSolver() {};
-  template <typename T0> AsaCgSolver(const T0 & f) : ISolver<Func>(f) {}
   void internalSolve(InputType & x0);
 };
 

@@ -29,15 +29,19 @@ namespace pwie
 template <typename Func>
 class LbfgsSolver : public ISolver<Func>
 {
-    typedef typename Func::Scalar Scalar;
-    typedef typename Func::InputType InputType;
-    typedef typename Func::JacobianType JacobianType;
-    typedef typename ISolver<Func>::HessianType HessianType;
-    using ISolver<Func>::settings;
+  typedef typename Func::Scalar Scalar;
+  typedef typename Func::InputType InputType;
+  typedef typename Func::JacobianType JacobianType;
+  typedef typename ISolver<Func>::HessianType HessianType;
+
+  using ISolver<Func>::settings;
+  using ISolver<Func>::_functor;
+
 public:
-    LbfgsSolver();
-    virtual ~LbfgsSolver() {};
-    void internalSolve(InputType & x0);
+
+  LbfgsSolver(const Func & func);
+  virtual ~LbfgsSolver() {};
+  void internalSolve(InputType & x0);
 };
 
 } /* namespace pwie */

@@ -31,16 +31,17 @@ template <typename Func>
 class ConjugateGradientSolver : public ISolver<Func>
 {
 private:
-    typedef typename Func::Scalar Scalar;
-    typedef typename Func::InputType InputType;
-    typedef typename Func::JacobianType JacobianType;
-    using ISolver<Func>::settings;
+  typedef typename Func::Scalar Scalar;
+  typedef typename Func::InputType InputType;
+  typedef typename Func::JacobianType JacobianType;
+
+  using ISolver<Func>::settings;
+  using ISolver<Func>::_functor;
 
 public:
-    ConjugateGradientSolver();
-    virtual ~ConjugateGradientSolver() {};
-    template <typename T0> ConjugateGradientSolver(const T0 & f) : ISolver<Func>(f) {}
-    void internalSolve(InputType & x0);
+  ConjugateGradientSolver(const Func & func);
+  virtual ~ConjugateGradientSolver() {};
+  void internalSolve(InputType & x0);
 };
 
 } /* namespace pwie */

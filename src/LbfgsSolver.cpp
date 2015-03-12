@@ -27,9 +27,8 @@ namespace pwie
 {
 
 template <typename Func>
-LbfgsSolver<Func>::LbfgsSolver() : ISolver<Func>()
+LbfgsSolver<Func>::LbfgsSolver(const Func & func) : ISolver<Func>(func)
 {
-    // TODO Auto-generated constructor stub
 }
 
 template <typename Func>
@@ -47,7 +46,7 @@ LbfgsSolver<Func>::internalSolve(InputType & x)
     Eigen::Matrix<Scalar, Eigen::Dynamic, 1> alpha(m);
     alpha.setZero();
     JacobianType grad(DIM);
-    this->gradient(x, grad);
+    _functor.gradient(x, grad);
     InputType x_old = x;
 
     size_t iter = 0;
@@ -74,7 +73,7 @@ LbfgsSolver<Func>::internalSolve(InputType & x)
         const double rate = ISolver<Func>::linesearch(x, -q);
         x = x - rate * q;
         JacobianType grad_old = grad;
-        this->gradient(x, grad);
+        _functor.gradient(x, grad);
 
         InputType s = x - x_old;
         JacobianType y = grad - grad_old;

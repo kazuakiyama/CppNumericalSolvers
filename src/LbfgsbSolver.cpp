@@ -44,7 +44,7 @@ sort_indexes(const std::vector< std::pair<int, _Scalar> > & v)
 
 
 template <typename Func>
-LbfgsbSolver<Func>::LbfgsbSolver() : ISolver<Func>()
+LbfgsbSolver<Func>::LbfgsbSolver(const Func & func) : ISolver<Func>(func)
 {
     // TODO Auto-generated constructor stub
 }
@@ -76,11 +76,11 @@ LbfgsbSolver<Func>::GetGeneralizedCauchyPoint(const InputType & x, JacobianType 
             Scalar tmp = 0;
             if(g(j) < 0)
             {
-                tmp = (x(j) - _upper(j)) / g(j);
+                tmp = (x(j) - _ub(j)) / g(j);
             }
             else
             {
-                tmp = (x(j) - _lower(j)) / g(j);
+                tmp = (x(j) - _lb(j)) / g(j);
             }
             d(j) = -g(j);
             SetOfT.push_back(std::make_pair(j, tmp));
@@ -126,9 +126,9 @@ LbfgsbSolver<Func>::GetGeneralizedCauchyPoint(const InputType & x, JacobianType 
     while((dt_min >= dt) && (i < _DIM))
     {
         if(d(b) > 0)
-            x_cauchy(b) = _upper(b);
+            x_cauchy(b) = _ub(b);
         else if(d(b) < 0)
-            x_cauchy(b) = _lower(b);
+            x_cauchy(b) = _lb(b);
 
         // z_b = x_p^{cp} - x_b
         Scalar zb = x_cauchy(b) - x(b);
@@ -186,13 +186,13 @@ LbfgsbSolver<Func>::FindAlpha(const InputType & x_cp, const VectorX & du, const 
         if(du(i) > 0)
         {
             alphastar = MIN(alphastar,
-                            (_upper(FreeVariables[i]) - x_cp(FreeVariables[i]))
+                            (_ub(FreeVariables[i]) - x_cp(FreeVariables[i]))
                             / du(i));
         }
         else
         {
             alphastar = MIN(alphastar,
-                            (_lower(FreeVariables[i]) - x_cp(FreeVariables[i]))
+                            (_lb(FreeVariables[i]) - x_cp(FreeVariables[i]))
                             / du(i));
         }
     }
@@ -214,8 +214,8 @@ LbfgsbSolver<Func>::SubspaceMinimization(InputType & x_cauchy, InputType & x, co
     //std::cout << "free vars " << FreeVariables.rows() << std::endl;
     for(int i = 0; i < x_cauchy.rows(); i++)
     {
-        Debug(x_cauchy(i) << " " << _upper(i) << " " << _lower(i));
-        if((x_cauchy(i) != _upper(i)) && (x_cauchy(i) != _lower(i)))
+        Debug(x_cauchy(i) << " " << _ub(i) << " " << _lb(i));
+        if((x_cauchy(i) != _ub(i)) && (x_cauchy(i) != _lb(i)))
         {
             FreeVariablesIndex.push_back(i);
         }
@@ -275,26 +275,24 @@ LbfgsbSolver<Func>::internalSolve(InputType & x0)
 {
     _DIM = x0.rows();
 
-    _lower = this->getLowerBound(_DIM);
-    _upper = this->getUpperBound(_DIM);
+    _lb = _functor.getLowerBound(_DIM);
+    _ub = _functor.getUpperBound(_DIM);
     theta = 1.0;
 
     W = MatrixX::Zero(_DIM, 0);
     M = MatrixX::Zero(0, 0);
 
-    Assert(x0.rows() == _lower.rows(), "lower bound size incorrect");
-    Assert(x0.rows() == _upper.rows(), "upper bound size incorrect");
+    Assert(x0.rows() == _lb.rows(), "lower bound size incorrect");
+    Assert(x0.rows() == _ub.rows(), "upper bound size incorrect");
 
     Debug(x0.transpose());
-    Debug(_lower.transpose());
-    Debug(_upper.transpose());
+    Debug(_lb.transpose());
+    Debug(_ub.transpose());
 
-    Assert((x0.array() >= _lower.array()).all(),
+    Assert((x0.array() >= _lb.array()).all(),
            "seed is not feasible (violates lower bound)");
-    Assert((x0.array() <= _upper.array()).all(),
+    Assert((x0.array() <= _ub.array()).all(),
            "seed is not feasible (violates upper bound)");
-
-    ISolver<Func>::getXHistory().push_back(x0);
 
     MatrixX yHistory = MatrixX::Zero(_DIM, 0);
     MatrixX sHistory = MatrixX::Zero(_DIM, 0);
@@ -303,8 +301,8 @@ LbfgsbSolver<Func>::internalSolve(InputType & x0)
     JacobianType g(_DIM);
     size_t k = 0;
 
-    Scalar f = Func::f(x);
-    Functor<Func>::gradient(x, g);
+    Scalar f = _functor.f(x);
+    _functor.gradient(x, g);
 
     Debug(f);
     Debug(g.transpose());
@@ -312,7 +310,7 @@ LbfgsbSolver<Func>::internalSolve(InputType & x0)
     auto noConvergence =
         [&](InputType & x, JacobianType & g)->bool
     {
-      auto d = (x - g).cwiseMax(_lower).cwiseMin(_upper) - x;
+      auto d = (x - g).cwiseMax(_lb).cwiseMin(_ub) - x;
       return d.template lpNorm<Eigen::Infinity>() >= settings.tol;
     };
 
@@ -335,12 +333,10 @@ LbfgsbSolver<Func>::internalSolve(InputType & x0)
         Scalar step = 2;
 
         // STEP 4: perform linesearch and STEP 5: compute gradient
-        int searchstatus = ISolver<Func>::LineSearch(x, SubspaceMin - x, f, g, step);
+        int searchstatus = LineSearch(x, SubspaceMin - x, f, g, step);
         if (searchstatus < 0) {
           return;
         }
-
-        ISolver<Func>::getXHistory().push_back(x);
 
         // prepare for next iteration
         JacobianType newY = g - g_old;
@@ -384,16 +380,15 @@ LbfgsbSolver<Func>::internalSolve(InputType & x0)
                                         * theta);
 
             M = MM.inverse();
-
         }
 
         Scalar ttt;
         ttt = f_old - f;
         using std::abs;
         Debug("--> " << abs(ttt));
-        if(abs(ttt) < 1e-13)
+        if (abs(ttt) < 1e-13)
         {
-            // successive function values too similar
+          // successive function values too similar
           if (no_improve_count++ > 10) {
             std::cout << "no improvement, norm=" << abs(ttt) << "\n";
             break;
@@ -404,9 +399,10 @@ LbfgsbSolver<Func>::internalSolve(InputType & x0)
         }
 
         k++;
+        settings.numIters = k;
 
         InputType dir = SubspaceMin - x;
-        this->checkConverged(k, x, step, dir, g);
+        ISolver<Func>::checkConverged(k, x, step, dir, g);
 
         if (settings.verbosity > 0) {
           stopwatch.stop();

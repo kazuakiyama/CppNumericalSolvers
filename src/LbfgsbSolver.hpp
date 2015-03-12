@@ -45,11 +45,13 @@ class LbfgsbSolver : public ISolver<Func>
 private:
     MatrixX W, M;
     Scalar theta;
-    InputType _upper;
-    InputType _lower;
+    InputType _ub;
+    InputType _lb;
     int _DIM;
 public:
     using ISolver<Func>::settings;
+    using ISolver<Func>::_functor;
+    using ISolver<Func>::LineSearch;
 private:
     /// <summary>
     /// find cauchy point in x
@@ -71,9 +73,8 @@ private:
                               JacobianType & g, InputType & SubspaceMin);
 
 public:
-    LbfgsbSolver();
+    LbfgsbSolver(const Func & func);
     virtual ~LbfgsbSolver() {};
-    template <typename T0> LbfgsbSolver(const T0 & f) : ISolver<Func>(f) {}
     void internalSolve(InputType & x0);
 };
 

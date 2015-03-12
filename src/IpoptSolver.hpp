@@ -44,7 +44,7 @@ protected:
   Referencer _dumbPtr; // work around for Ipopt's stupid SmartPtr
 
 public:
-  IpoptSolver() { AddRef(&_dumbPtr); }
+  IpoptSolver(const Func & func) : ISolver<Func>(func) { AddRef(&_dumbPtr); }
   virtual ~IpoptSolver() { ReleaseRef(&_dumbPtr); }
   IpoptSolver(const IpoptSolver & rhs) = delete;
 

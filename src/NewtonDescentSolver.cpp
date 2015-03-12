@@ -28,7 +28,7 @@ namespace pwie
 {
 
 template <typename Func>
-NewtonDescentSolver<Func>::NewtonDescentSolver() : ISolver<Func>()
+NewtonDescentSolver<Func>::NewtonDescentSolver(const Func & func) : ISolver<Func>(func)
 {
 }
 
@@ -42,8 +42,8 @@ NewtonDescentSolver<Func>::internalSolve(InputType & x)
     HessianType hessian = HessianType::Zero(DIM, DIM);
     Stopwatch<> stopwatch;
 
-    this->gradient(x, grad);
-    this->hessian(x, hessian);
+    _functor.gradient(x, grad);
+    _functor.hessian(x, hessian);
 
     size_t iter = 0;
     do
@@ -53,8 +53,8 @@ NewtonDescentSolver<Func>::internalSolve(InputType & x)
         const double rate = this->linesearch(x, delta_x);
         x = x + rate * delta_x;
 
-        this->gradient(x, grad);
-        this->hessian(x, hessian);
+        _functor.gradient(x, grad);
+        _functor.hessian(x, hessian);
 
         iter++;
         { 

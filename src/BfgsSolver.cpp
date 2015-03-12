@@ -26,11 +26,9 @@ namespace pwie
 {
 
 template <typename Func>
-BfgsSolver<Func>::BfgsSolver() : ISolver<Func>()
+BfgsSolver<Func>::BfgsSolver(const Func & func) : ISolver<Func>(func)
 {
-
 }
-
 
 template <typename Func>
 void
@@ -45,12 +43,12 @@ BfgsSolver<Func>::BfgsSolver::internalSolve(InputType & x)
 
     do
     {
-        this->gradient(x, grad);
+        _functor.gradient(x, grad);
         JacobianType p = -1 * H * grad;
         const double rate = this->linesearch(x, p);
         x = x + rate * p;
         JacobianType grad_old = grad;
-        this->gradient(x, grad);
+        _functor.gradient(x, grad);
 
         InputType s = x - x_old;
         JacobianType y = grad - grad_old;

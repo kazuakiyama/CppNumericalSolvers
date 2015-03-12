@@ -29,13 +29,16 @@ namespace pwie
 template <typename Func>
 class BfgsSolver : public ISolver<Func>
 {
-    typedef typename Func::InputType InputType;
-    typedef typename Func::JacobianType JacobianType;
-    typedef typename ISolver<Func>::HessianType HessianType;
-    using ISolver<Func>::settings;
+  typedef typename Func::InputType InputType;
+  typedef typename Func::JacobianType JacobianType;
+  typedef typename ISolver<Func>::HessianType HessianType;
+
+  using ISolver<Func>::settings;
+  using ISolver<Func>::_functor;
+
 public:
-    BfgsSolver();
-    void internalSolve(InputType & x0);
+  BfgsSolver(const Func & func);
+  void internalSolve(InputType & x0);
 };
 
 } /* namespace pwie */

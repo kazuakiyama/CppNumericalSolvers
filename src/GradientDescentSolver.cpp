@@ -26,7 +26,7 @@ namespace pwie
 {
 
 template <typename Func>
-GradientDescentSolver<Func>::GradientDescentSolver() : ISolver<Func>()
+GradientDescentSolver<Func>::GradientDescentSolver(const Func & func) : ISolver<Func>(func)
 {
 }
 
@@ -39,7 +39,7 @@ GradientDescentSolver<Func>::internalSolve(InputType & x)
     size_t iter = 0;
     do
     {
-        this->gradient(x, grad);
+        _functor.gradient(x, grad);
         const double rate = this->linesearch(x, -grad) ;
 
         x = x - rate * grad;

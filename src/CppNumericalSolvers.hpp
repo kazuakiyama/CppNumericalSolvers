@@ -57,19 +57,19 @@ typedef enum {
 #endif
 } solver_id;
 
-template <typename FUNCTOR>
-static pwie::ISolver<FUNCTOR> * getSolver(solver_id type)
+template <typename Func>
+static ISolver<Func> * getSolver(const Func & f, solver_id type)
 {
   switch (type) {
-  case SOLVER_GRADD:    return new pwie::GradientDescentSolver<FUNCTOR>();
-  case SOLVER_NEWTON:   return new pwie::NewtonDescentSolver<FUNCTOR>();
-  case SOLVER_CG:       return new pwie::ConjugateGradientSolver<FUNCTOR>();
-  case SOLVER_ASA_CG:   return new pwie::AsaCgSolver<FUNCTOR>();
-  case SOLVER_BFGS:     return new pwie::BfgsSolver<FUNCTOR>();
-  case SOLVER_LBFGS:    return new pwie::LbfgsSolver<FUNCTOR>();
-  case SOLVER_LBFGSB:   return new pwie::LbfgsbSolver<FUNCTOR>();
+  case SOLVER_GRADD:    return new GradientDescentSolver<Func>(f);
+  case SOLVER_NEWTON:   return new NewtonDescentSolver<Func>(f);
+  case SOLVER_CG:       return new ConjugateGradientSolver<Func>(f);
+  case SOLVER_ASA_CG:   return new AsaCgSolver<Func>(f);
+  case SOLVER_BFGS:     return new BfgsSolver<Func>(f);
+  case SOLVER_LBFGS:    return new LbfgsSolver<Func>(f);
+  case SOLVER_LBFGSB:   return new LbfgsbSolver<Func>(f);
 #ifdef HAVE_IPOPT
-  case SOLVER_IPOPT:    return new pwie::IpoptSolver<FUNCTOR>();
+  case SOLVER_IPOPT:    return new IpoptSolver<Func>(f);
 #endif
   }
   std::cerr << "ERROR: unknown solver type requested:" << type << "\n";

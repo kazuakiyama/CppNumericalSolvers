@@ -27,7 +27,8 @@ namespace pwie
 {
 
 template <typename Func>
-ConjugateGradientSolver<Func>::ConjugateGradientSolver() : ISolver<Func>()
+ConjugateGradientSolver<Func>::ConjugateGradientSolver(const Func & func)
+  : ISolver<Func>(func)
 {
 }
 
@@ -43,7 +44,7 @@ ConjugateGradientSolver<Func>::internalSolve(InputType & x)
   JacobianType Si_old(x.rows());
   Stopwatch<> stopwatch;
 
-  this->gradient(x, grad);
+  _functor.gradient(x, grad);
 
   while ((grad.template lpNorm<Eigen::Infinity>() > settings.gradTol) &&
          (iter < settings.maxIter)) { 
@@ -68,20 +69,18 @@ ConjugateGradientSolver<Func>::internalSolve(InputType & x)
 
     x = x + rate * Si;
 
-    ISolver<Func>::getXHistory().push_back(x);
-
     iter++;
     grad_old = grad;
     Si_old = Si;
 
     if (0) { 
       stopwatch.stop();
-      std::cout << "iteration " << iter << " " << Func::f(x) 
+      std::cout << "iteration " << iter << " " << _functor.f(x) 
                 << " dt=" << stopwatch.elapsed()/1e3 << std::endl;
       stopwatch.start();
     }
-
-    this->gradient(x, grad);
+    settings.numIters = iter;
+    _functor.gradient(x, grad);
   }
 }
 }

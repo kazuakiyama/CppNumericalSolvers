@@ -36,7 +36,7 @@ static const char * solver_names[] = {
   "Ipopt",
 };
 
-class example000Functor {
+class example000Func {
 public:
     typedef double Scalar;
     enum {
@@ -64,7 +64,7 @@ public:
     }
 };
 
-struct example000FunctorBADG : public example000Functor {
+struct example000FuncBADG : public example000Func {
     // create derivative of function
     void gradient(const InputType & x, JacobianType & grad) const {
         // wrong derivative of function
@@ -80,14 +80,15 @@ int example000(void)
               << "------------------------------------------" << std::endl;
 
     // check your gradient!
-    Functor<example000Functor> f;
+    example000Func f_;
+    Functor<example000Func> f(f_);
 
     // random x
-    example000Functor::InputType x(2);
+    example000Func::InputType x(2);
     x << 15, 8;
 
     // get "derivatives"
-    example000Functor::JacobianType dx(2);
+    example000Func::JacobianType dx(2);
     f.gradient(x, dx);
 
     // verify gradient by finite differences
@@ -100,9 +101,10 @@ int example000(void)
     }
 
     std::cout << "check wrong gradient:   ";
-    Functor<example000FunctorBADG> fb;
+    example000FuncBADG fb_;
+    Functor<example000Func> fb(fb_);
     gerr = fb.checkGradient(x);
-    if(gerr > 1e-13)
+    if (gerr > 1e-13)
     {
         std::cout << "gradient probably wrong" << std::endl;
     }
@@ -110,7 +112,7 @@ int example000(void)
     return 0;
 }
 
-class example001Functor {
+class example001Func {
 public:
     typedef double Scalar;
     enum {
@@ -137,11 +139,12 @@ int example001(void)
             << "------------------------------------------" << std::endl;
 
   // initial guess
-  example001Functor::InputType x0(2);
+  example001Func::InputType x0(2);
+  example001Func f;
   for (int ii = 0; ii < SOLVER_COUNT; ii++) {
     x0 << 3, 2;
     // use solver (GradientDescentSolver,BfgsSolver,LbfgsSolver,LbfgsbSolver)
-    std::unique_ptr<ISolver<example001Functor> > g(getSolver<example001Functor>((solver_id)ii));
+    std::unique_ptr<ISolver<example001Func> > g(getSolver<example001Func>(f, (solver_id)ii));
     try {
       g->solve(x0);
     } catch (std::exception & ex) {
@@ -163,10 +166,11 @@ int example002(void)
             << "------------------------------------------" << std::endl;
 
   // initial guess
-  example000Functor::InputType x0(2);
+  example000Func::InputType x0(2);
+  example000Func f;
   for (int ii = 0; ii < SOLVER_COUNT; ii++) {
     // use solver (GradientDescentSolver,BfgsSolver,LbfgsSolver,LbfgsbSolver)
-    std::unique_ptr<ISolver<example000Functor> > g(getSolver<example000Functor>((solver_id)ii));
+    std::unique_ptr<ISolver<example000Func> > g(getSolver<example000Func>(f, (solver_id)ii));
     x0 << 15, 8;
     x0 << -1.2,1;
 
@@ -183,7 +187,7 @@ int example002(void)
   return 0;
 }
 
-class example003Functor {
+class example003Func {
 public:
     typedef double Scalar;
     enum {
@@ -199,7 +203,7 @@ public:
         grad = JacobianType(x.rows());
         grad = 2 * A.transpose() * (A * x) - 2 * A.transpose() * y;
     }
-    example003Functor() {
+    example003Func() {
         A << 0.2, 0.25, 0.4, 0.5, 0.4, 0.25;
         y << 0.9, 1.7, 1.2;
     }
@@ -222,10 +226,11 @@ int example003(void)
             << "------------------------------------------" << std::endl;
 
   // initial guess
-  example003Functor::InputType x0(2);
+  example003Func::InputType x0(2);
+  example003Func f;
   for (int ii = 0; ii < SOLVER_COUNT; ii++) {
     // use solver (GradientDescentSolver,BfgsSolver,LbfgsSolver,LbfgsbSolver)
-    std::unique_ptr<ISolver<example003Functor> > g(getSolver<example003Functor>((solver_id)ii));
+    std::unique_ptr<ISolver<example003Func> > g(getSolver<example003Func>(f, (solver_id)ii));
     x0 << 15, 8;
 
     try {
@@ -243,7 +248,7 @@ int example003(void)
 }
 
 // super-simple case: y = x^2
-class example004Functor {
+class example004Func {
 public:
   typedef double Scalar;
   enum {
@@ -275,18 +280,21 @@ int example004(void)
             << "------------------------------------------" << std::endl;
 
   // initial guess
-  example004Functor::InputType x0(1);
+  example004Func::InputType x0(1);
   double y0;
-  example004Functor::JacobianType gradFD(1), gradD(1), grad(1);
-  pwie::LbfgsbSolver<example004Functor> diff;
+  example004Func::JacobianType gradFD(1), gradD(1), grad(1);
+  example004Func func;
+  Functor<example004Func> functor(func);
+  pwie::LbfgsbSolver<example004Func> diff(func);
+
   diff.settings.verbosity = 1;
 
   for (int ii = -100; ii < 100; ii++) {
     x0[0] = ii/10.0;
-    y0 = diff.f(x0);
-    diff.gradient(x0, grad);
-    diff.gradientFiniteDiff(x0, gradFD);
-    diff.gradientDual(x0, gradD);
+    y0 = functor.f(x0);
+    functor.gradient(x0, grad);
+    functor.gradientFiniteDiff(x0, gradFD);
+    functor.gradientDual(x0, gradD);
     std::cout << "x=" << x0 << " y=" << y0 << " f.d. grad=" << gradFD
               << " dual=" << gradD << " grad=" << grad << "\n";
   }
