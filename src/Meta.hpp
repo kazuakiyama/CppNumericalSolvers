@@ -215,10 +215,10 @@ public:
   void gradientDual(const InputType & x, JacobianType & grad) const {
 #ifdef USE_COMPLEX_DUAL
     DualScalar eps(0, sqrt(std::numeric_limits<Scalar>::epsilon()));
-    std::cerr << "gDU, eps=" << eps << "\n";
+    //std::cerr << "gDU, eps=" << eps << "\n";
 #else
     DualScalar eps(0, 1.0);
-    std::cerr << "gDU, eps=" << eps << "\n";
+    //std::cerr << "gDU, eps=" << eps << "\n";
 #endif
     const size_t DIM = x.rows();
     JacobianType gg(DIM);
