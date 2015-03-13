@@ -12,25 +12,73 @@
 #define EIGEN_MATIO_MODULE
 
 #include "matio.h"
+#ifndef MATIO_VERSION
+#define MATIO_VERSION (MATIO_MAJOR_VERSION * 100 + MATIO_MINOR_VERSION * 10 + MATIO_RELEASE_LEVEL)
+#endif
+
+#if MATIO_VERSION <= 150
+#define MAT_COMPRESSION_NONE COMPRESSION_NONE
+#define MAT_COMPRESSION_ZLIB COMPRESSION_ZLIB
+typedef ComplexSplit mat_complex_split_t;
+#endif
 
 namespace Eigen {
 
 namespace internal {
+
 // defaults
 template <typename Tp> struct matio_type;
 template <typename Tp> struct matio_class;
 template <typename Tp> struct matio_flag { static const matio_flags id = (matio_flags)0; };
 // specializations
+//template <> struct matio_type<xxx> { typedef xxx type; matio_types id = MAT_T_UNKNOWN; };
+template <> struct matio_type<int8_t> { typedef int8_t type; matio_types id = MAT_T_INT8; };
+template <> struct matio_type<uint8_t> { typedef uint8_t type; matio_types id = MAT_T_UINT8; };
+template <> struct matio_type<int16_t> { typedef int16_t type; matio_types id = MAT_T_INT16; };
+template <> struct matio_type<uint16_t> { typedef uint16_t type; matio_types id = MAT_T_UINT16; };
+template <> struct matio_type<int32_t> { typedef int32_t type; matio_types id = MAT_T_INT32; };
+template <> struct matio_type<uint32_t> { typedef uint32_t type; matio_types id = MAT_T_UINT32; };
 template <> struct matio_type<float> { typedef float type; static const matio_types id = MAT_T_SINGLE; };
 template <> struct matio_type<double> { typedef double type; static const matio_types id = MAT_T_DOUBLE; };
 template <> struct matio_type<long double> { typedef double type; static const matio_types id = MAT_T_DOUBLE; };
-template <typename Tp> struct matio_type<std::complex<Tp> > { typedef Tp type; static const matio_types id = matio_type<Tp>::id; };
+template <> struct matio_type<int64_t> { typedef int64_t type; matio_types id = MAT_T_INT64; };
+template <> struct matio_type<uint64_t> { typedef uint64_t type; matio_types id = MAT_T_UINT64; };
+//template <> struct matio_type<xxx> { typedef xxx type; matio_types id = MAT_T_MATRIX; };
+//template <> struct matio_type<xxx> { typedef xxx type; matio_types id = MAT_T_COMPRESSED; };
+//template <> struct matio_type<xxx> { typedef xxx type; matio_types id = MAT_T_UTF8; };
+//template <> struct matio_type<xxx> { typedef xxx type; matio_types id = MAT_T_UTF16; };
+//template <> struct matio_type<xxx> { typedef xxx type; matio_types id = MAT_T_UTF32; };
+//template <> struct matio_type<xxx> { typedef xxx type; matio_types id = MAT_T_STRING; };
+//template <> struct matio_type<xxx> { typedef xxx type; matio_types id = MAT_T_CELL; };
+//template <> struct matio_type<xxx> { typedef xxx type; matio_types id = MAT_T_STRUCT; };
+//template <> struct matio_type<xxx> { typedef xxx type; matio_types id = MAT_T_ARRAY; };
+//template <> struct matio_type<xxx> { typedef xxx type; matio_types id = MAT_T_FUNCTION; };
+
+//template <> struct matio_class<xxx> { matio_classes id = MAT_C_CELL; };
+//template <> struct matio_class<xxx> { matio_classes id = MAT_C_STRUCT; };
+//template <> struct matio_class<xxx> { matio_classes id = MAT_C_OBJECT; };
+template <> struct matio_class<char> { matio_classes id = MAT_C_CHAR; };
+//template <> struct matio_class<xxx> { matio_classes id = MAT_C_SPARSE; };
 template <> struct matio_class<float> { static const matio_classes id = MAT_C_SINGLE; };
 template <> struct matio_class<double> { static const matio_classes id = MAT_C_DOUBLE; };
 template <> struct matio_class<long double> { static const matio_classes id = MAT_C_DOUBLE; };
-template <typename Tp> struct matio_flag<std::complex<Tp> > { static const matio_flags id = MAT_F_COMPLEX; };
+template <> struct matio_class<int8_t> { matio_classes id = MAT_C_INT8; };
+template <> struct matio_class<uint8_t> { matio_classes id = MAT_C_UINT8; };
+template <> struct matio_class<int16_t> { matio_classes id = MAT_C_INT16; };
+template <> struct matio_class<uint16_t> { matio_classes id = MAT_C_UINT16; };
+template <> struct matio_class<int32_t> { matio_classes id = MAT_C_INT32; };
+template <> struct matio_class<uint32_t> { matio_classes id = MAT_C_UINT32; };
+template <> struct matio_class<int64_t> { matio_classes id = MAT_C_INT64; };
+template <> struct matio_class<uint64_t> { matio_classes id = MAT_C_UINT64; };
+//template <> struct matio_class<xxx> { matio_classes id = MAT_C_FUNCTION; };
 
-}
+template <typename Tp> struct matio_flag<std::complex<Tp> > { static const matio_flags id = MAT_F_COMPLEX; };
+//template <> struct matio_flag<xxx> { matio_flags id = MAT_F_COMPLEX; };
+//template <> struct matio_flag<xxx> { matio_flags id = MAT_F_GLOBAL; };
+//template <> struct matio_flag<xxx> { matio_flags id = MAT_F_LOGICAL; };
+//template <> struct matio_flag<xxx> { matio_flags id = MAT_F_CLASS_T; };
+
+} // Eigen::internal::
 
 class MatioFile {
 public:
@@ -56,8 +104,13 @@ public:
     if (_file)
       close();
     _file = Mat_Open(filename, mode);
-    if (_file == NULL && create)
+    if (_file == NULL && create) {
+#if MATIO_VERSION >= 150
       _file = Mat_CreateVer(filename, header, MAT_FT_DEFAULT);
+#else
+      _file = Mat_Create(filename, header);
+#endif
+    }
     if (NULL == _file) {
       std::cout << "MatioFile() unable to open " << filename << "\n";
       return false;
@@ -79,12 +132,7 @@ public:
     if (!_file || !matname)
       return false;
     typedef typename internal::matio_type<typename Matrix:: Scalar>::type mat_type;
-#if MATIO_VERSION >= 150
     enum matio_compression compression = MAT_COMPRESSION_NONE;
-#else
-    // version 134
-    enum matio_compression compression = COMPRESSION_NONE;
-#endif
     matvar_t * var;
     int status;
 #if MATIO_VERSION >= 150
@@ -107,11 +155,7 @@ public:
     void * data;
     Eigen::Matrix<mat_type,Eigen::Dynamic,Eigen::Dynamic> dst_re(rows, cols);
     Eigen::Matrix<mat_type,Eigen::Dynamic,Eigen::Dynamic> dst_im(rows, cols);
-#if MATIO_VERSION >= 150
     mat_complex_split_t cs;
-#else
-    ComplexSplit cs;
-#endif
 
     if (cxflag == MAT_F_COMPLEX) {
       dst_re = matrix.real().template cast<mat_type>();
