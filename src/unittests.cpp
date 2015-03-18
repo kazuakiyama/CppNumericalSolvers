@@ -73,7 +73,7 @@ public:
 TEST(GradientDescentTest, RosenbrockFar)   {
   SOLVE_1stOrder(pwie::GradientDescentSolver, rosenbrock, 15.0, 8.0, 0.0)
     }
-TEST(GradientDescentTest, DISABLED_RosenbrockNear)  {
+TEST(GradientDescentTest, RosenbrockNear)  {
   SOLVE_1stOrder(pwie::GradientDescentSolver, rosenbrock, -1.2, 1.0, 0.0)
     }
 TEST(GradientDescentTest, RosenbrockNearish)  {

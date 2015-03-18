@@ -26,7 +26,8 @@ namespace pwie
 {
 
 template <typename Func>
-GradientDescentSolver<Func>::GradientDescentSolver(const Func & func) : ISolver<Func>(func)
+GradientDescentSolver<Func>::GradientDescentSolver(const Func & func)
+  : ISolver<Func>(func)
 {
 }
 
@@ -34,19 +35,27 @@ template <typename Func>
 void
 GradientDescentSolver<Func>::internalSolve(InputType & x)
 {
-    JacobianType grad(x.rows());
+  JacobianType grad(x.rows());
+  Stopwatch<> stopwatch;
 
-    size_t iter = 0;
-    do
-    {
-        _functor.gradient(x, grad);
-        const double rate = this->linesearch(x, -grad) ;
+  size_t iter = 0;
+  do {
+    _functor.gradient(x, grad);
+    const double rate = this->linesearch(x, -grad);
 
-        x = x - rate * grad;
-        iter++;
+    x = x - rate * grad;
+    iter++;
+
+    if (0) {
+      stopwatch.stop();
+      std::cout << "iteration " << iter << " f=" << _functor.f(x)
+                << " dt=" << stopwatch.elapsed()/1e3 << std::endl;
+      stopwatch.start();
     }
-    while((grad.template lpNorm<Eigen::Infinity>() > settings.gradTol) &&
-          (iter < settings.maxIter));
+    settings.numIters = iter;
+  }
+  while((grad.template lpNorm<Eigen::Infinity>() > settings.gradTol) &&
+        (iter < settings.maxIter));
 }
 
 }

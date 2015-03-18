@@ -105,6 +105,10 @@ ISolver<Func>::linesearch(const InputType & xp, const JacobianType & direction)
   InputType x = xp;
   JacobianType g(xp.rows());
   int status = LineSearch(x, direction, f, g, step);
+  if (status == LBFGSERR_ROUNDING_ERROR) {
+    std::cerr << "_linesearch min: " << step << " f=" << f << " fallback\n";
+    return linesearch2(xp, direction);
+  }
   if (status < 0) {
     std::cerr << "_linesearch failed: " << status << "\n";
     throw std::exception();
@@ -116,22 +120,46 @@ template <typename Func>
 typename ISolver<Func>::Scalar
 ISolver<Func>::linesearch2(const InputType & x, const JacobianType & direction)
 {
-  const Scalar alpha = 0.001; // c1
+  const Scalar alpha = 0.9; // c1
   const Scalar beta = 0.1;    // c2
-  Scalar t = 1.0;
-
-  InputType xx = x + t * direction;
-  Scalar f = _functor.f(xx);
-  const Scalar f_in = f;
   JacobianType grad(x.rows());
   _functor.gradient(x, grad);
-  const Scalar Cache = alpha * grad.dot(direction);
+  Scalar tinit = 1 / grad.norm();
+  Scalar t = tinit;
+  //t = 1.0;
+  InputType xx = x - t * direction;
+  Scalar f     = _functor.f(xx);
+  Scalar fnext = f;
+  Scalar f0    = _functor.f(x);
 
-  while (f > f_in + t * Cache) {
+  do {
+    f = fnext;
+    t = t * 1.1;
+    xx = x + t * direction;
+    fnext = _functor.f(xx);
+  }
+  while (fnext < f);
+  t = t / 1.1;
+
+  const Scalar Cache = alpha * grad.dot(direction);
+  while (f > (f0 + t * Cache)) {
     t *= beta;
     xx = x + t * direction;
     f = _functor.f(xx);
   }
+
+  Scalar fnext2 = f;
+  do {
+    f = fnext2;
+    t *= alpha;
+    xx = x + t * direction;
+    fnext2 = _functor.f(xx);
+  }
+  while (fnext2 < f);
+  t /= alpha;
+
+  if (f >= f0)
+    std::cout << "WARNING, ascent: f=" << f << " f0=" << f0 << " f-f0=" << f-f0 << "\n";
 
   return t;
 }
