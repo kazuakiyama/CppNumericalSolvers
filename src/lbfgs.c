@@ -899,8 +899,8 @@ int line_search_morethuente(
         /* Test for errors and convergence. */
         if (brackt && ((*stp <= stmin || stmax <= *stp) || uinfo != 0)) {
             /* Rounding errors prevent further progress. */
-          fprintf(stderr, "rouding error cnt=%d, stp=%g stmin=%g stmax=%g uinfo=%i\n",
-                  count, *stp, stmin, stmax, uinfo);
+            //fprintf(stderr, "rouding error cnt=%d, stp=%g stmin=%g stmax=%g uinfo=%i\n",
+            //        count, *stp, stmin, stmax, uinfo);
             return LBFGSERR_ROUNDING_ERROR;
         }
         if (*stp == param->max_step && *f <= ftest1 && dg <= dgtest) {
