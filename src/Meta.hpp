@@ -122,6 +122,17 @@ public:
     gradient(x, grad, has_member_func_gradient<Func>());
   }
 
+  // template magic to create constraint function if none is provided
+private:
+  CREATE_MEMBER_FUNC_SIG_CHECK(constraints, void (T::*)(const InputType & x, Eigen::VectorXd & g) const, constraints);
+  inline void constraints(const InputType & x, Eigen::VectorXd & g, std::true_type) const { _func.constraints(x, g); }
+  inline void constraints(const InputType & x, Eigen::VectorXd & g, std::false_type) const { g.resize(0); }
+public:
+  // return the gradient/jacobian
+  inline void constraints(const InputType & x, Eigen::VectorXd & g) const {
+    constraints(x, g, has_member_func_gradient<Func>());
+  }
+
   // template magic to create hessian function if none is provided
 private:
   CREATE_MEMBER_FUNC_SIG_CHECK(hessian, void (T::*)(const InputType & x, HessianType & hes) const, hessian);
