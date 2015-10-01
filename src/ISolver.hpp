@@ -1,5 +1,6 @@
 /**
  * Copyright (c) 2014 Patrick Wieschollek
+ * Copyright (c) 2015 Michael Tesch
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,21 +34,23 @@ template <typename _Scalar>
 struct Options
 {
   typedef _Scalar Scalar;
-  Scalar gradTol;       // minimum gradient norm
-  Scalar tol;           // 
-  Scalar rate;          // 
-  size_t maxIter;       // maximum solver iterations
-  size_t numIters;      // actual number of solver iterations
-  size_t m;             // parameter for Lbfgs[b] - size of hessian estimate
-  int verbosity;        // verbosity level, 0=quiet
+  Scalar gradTol;        // minimum gradient norm
+  Scalar tol;            // minimum objective improvement (TolFun)
+  Scalar rate;           // 
+  Scalar objectiveLimit; // stop when objective goes below this
+  size_t maxIter;        // maximum solver iterations
+  size_t numIters;       // actual number of solver iterations
+  size_t m;              // parameter for Lbfgs[b] - size of hessian estimate
+  int verbosity;         // verbosity level, 0=quiet
 
   Options()
   {
     // stop when the ||gradient||_inf is below this.
     gradTol = 1e-9;
-    // stop when successive 
+    // stop when successive improvement drops below tol
     tol = 1e-9;
     rate = 0.00005;
+    objectiveLimit = -1e-21;
     maxIter = 100000;
     numIters = 0;
     m = 10;
