@@ -50,7 +50,7 @@ struct Options
     // stop when successive improvement drops below tol
     tol = 1e-9;
     rate = 0.00005;
-    objectiveLimit = -1e-21;
+    objectiveLimit = -1e21;
     maxIter = 100000;
     numIters = 0;
     m = 10;
