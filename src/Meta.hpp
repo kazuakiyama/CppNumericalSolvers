@@ -133,6 +133,12 @@ public:
     constraints(x, g, has_member_func_gradient<Func>());
   }
 
+  inline bool eval_jac_g(int n, const double * x, bool new_x,
+                         int m, int nele_jac, int * iRow, int * jCol,
+                         double * values) const {
+    return _func.eval_jac_g(n, x, new_x, m, nele_jac, iRow, jCol, values);
+  }
+
   // template magic to create hessian function if none is provided
 private:
   CREATE_MEMBER_FUNC_SIG_CHECK(hessian, void (T::*)(const InputType & x, HessianType & hes) const, hessian);
