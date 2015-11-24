@@ -37,6 +37,7 @@
 #define LIB_CXXDUALS 1
 
 #include <cmath>
+#include <ctgmath>
 #include <sstream>
 #include <complex>
 #include <limits>
@@ -84,14 +85,14 @@ template<typename _Tp>
 struct numeric_limits<cxxduals::dual<_Tp> > : public numeric_limits<_Tp> {
   typedef cxxduals::dual<_Tp> T;
   static CXXDUALS_CONSTEXPR bool is_specialized = true;
-  static CXXDUALS_CONSTEXPR T min()     { return T(numeric_limits<_Tp>::min()); }
-  static CXXDUALS_CONSTEXPR T max()     { return T(numeric_limits<_Tp>::max()); }
-  static CXXDUALS_CONSTEXPR T epsilon() { return T(numeric_limits<_Tp>::epsilon()); }
-  static CXXDUALS_CONSTEXPR T round_error() { return T(numeric_limits<_Tp>::round_error()); }
-  static CXXDUALS_CONSTEXPR T infinity()    { return T(numeric_limits<_Tp>::infinity()); }
-  static CXXDUALS_CONSTEXPR T quiet_NaN()   { return T(numeric_limits<_Tp>::quiet_NaN()); }
+  static CXXDUALS_CONSTEXPR T min()           { return T(numeric_limits<_Tp>::min()); }
+  static CXXDUALS_CONSTEXPR T max()           { return T(numeric_limits<_Tp>::max()); }
+  static CXXDUALS_CONSTEXPR T epsilon()       { return T(numeric_limits<_Tp>::epsilon()); }
+  static CXXDUALS_CONSTEXPR T round_error()   { return T(numeric_limits<_Tp>::round_error()); }
+  static CXXDUALS_CONSTEXPR T infinity()      { return T(numeric_limits<_Tp>::infinity()); }
+  static CXXDUALS_CONSTEXPR T quiet_NaN()     { return T(numeric_limits<_Tp>::quiet_NaN()); }
   static CXXDUALS_CONSTEXPR T signaling_NaN() { return T(numeric_limits<_Tp>::signaling_NaN()); }
-  static CXXDUALS_CONSTEXPR T denorm_min()  { return T(numeric_limits<_Tp>::denorm_min()); }
+  static CXXDUALS_CONSTEXPR T denorm_min()    { return T(numeric_limits<_Tp>::denorm_min()); }
 };
 // TODO: cv-specializations (C++11 18.3.2.3/2)
 } // std
@@ -133,6 +134,28 @@ struct dual_trait_helper<dual<_Tp> > : public dual_traits_basic<typename dual<_T
   typedef typename dual_trait_helper<_Tp>::is_dual is_nested;
 };
 
+namespace internal {
+// filter to only allow basic types to be converted in constructor below
+template <typename _Tp> struct arg_filter;
+template <> struct arg_filter<int> { arg_filter(int x) : val(x) {} int val; };
+template <> struct arg_filter<float> { arg_filter(float x) : val(x) {} float val; };
+template <> struct arg_filter<double> { arg_filter(double x) : val(x) {} double val; };
+template <> struct arg_filter<long double> { arg_filter(long double x) : val(x) {} long double val; };
+template <typename _Tp> struct arg_filter<std::complex<_Tp> > {
+  arg_filter(std::complex<_Tp> x) : val(x) {} std::complex<_Tp> val; };
+
+template <typename _Tp> struct arg_filter2;
+template <> struct arg_filter2<int> { typedef int test; };
+template <> struct arg_filter2<float> { typedef int test; };
+template <> struct arg_filter2<double> { typedef int test; };
+template <> struct arg_filter2<long double> { typedef int test; };
+template <> struct arg_filter2<std::complex<float> > { typedef int test; };
+template <> struct arg_filter2<std::complex<double> > { typedef int test; };
+template <> struct arg_filter2<std::complex<long double> > { typedef int test; };
+//template <typename _Xp> struct arg_filter2<std::complex<_Xp> > : public arg_filter2<_Xp> {};
+
+}
+
 /// dual number class
 template <typename _Tp>
 class dual {
@@ -152,11 +175,20 @@ public:
   CXXDUALS_CONSTEXPR dual()
     : _f0(), _f1() { }
 
-  template <typename _Up>
+  CXXDUALS_CONSTEXPR dual(const _Tp & f0)
+    : _f0(f0), _f1() { }
+
+  CXXDUALS_CONSTEXPR dual(const _Tp & f0, const _Tp & f1)
+    : _f0(f0), _f1(f1) { }
+
+  template <typename _Up,
+            typename _Ux = typename internal::arg_filter2<_Up>::test >
   CXXDUALS_CONSTEXPR dual(const _Up & f0)
     : _f0(f0), _f1() { }
 
-  template <typename _Up, typename _Vp>
+  template <typename _Up, typename _Vp, 
+            typename _Ux = typename internal::arg_filter2<_Up>::test,
+            typename _Vx = typename internal::arg_filter2<_Vp>::test >
   CXXDUALS_CONSTEXPR dual(const _Up & f0, const _Vp & f1)
     : _f0(f0), _f1(f1) { }
 
@@ -265,8 +297,16 @@ public:
   inline dual<_Tp> &
   operator=(const _Tp & rhs) { _f0 = rhs; _f1 = _Tp(); return *this; }
 #endif
+
+  template <typename _Up,
+            typename _Ux = typename internal::arg_filter2<_Up>::test >
+  inline dual<_Tp> &
+  operator=(const _Up & f0) { _f0 = f0; _f1 = _Tp(); return *this; }
+
+#if 0
   inline dual<_Tp> &
   operator=(const dual<_Tp> & rhs) { _f0 = rhs._f0; _f1 = rhs._f1; return *this; }
+#endif
 
   template<typename _Up>
   inline dual<_Tp> &
@@ -587,38 +627,37 @@ pow(const dual<_Tp> & xx, const _Up & aa)
   deriv = aa * pow(xval, (aa - _Tp(1.0)));
   temp.rpart() = pow(xx.rpart(), aa);  //Use actual x value, only use tol for derivs
   temp.epart() = xx.epart() * deriv;
-#else
+#endif
   //return exp(xx * dual<_Tp>(log(aa)));
   temp.rpart() = pow(xx.rpart(), aa);
-  temp.epart() = xx.epart() * aa * pow(xx.rpart(), aa - _Up(1));
-#endif
+  temp.epart() = xx.epart() * _Tp(aa) * pow(xx.rpart(), aa - _Up(1));
   return temp;
 }
 #if 1
 template <typename _Tp>
 dual<_Tp>
-pow(const _Tp & aa, const dual<_Tp> & xx)
+pow(const _Tp & aa, const dual<_Tp> & yy)
 {
   using std::pow;
   using std::log;
-  using std::exp;
-#if 0
-  return exp(xx * log(aa));
-#else
   dual<_Tp> temp;
-  temp.rpart() = pow(aa, xx.rpart());
-  temp.epart() = xx.epart() * pow(aa, xx.rpart()) * log(aa);
+  temp.rpart() = pow(aa, yy.rpart());
+  temp.epart() = yy.epart() * log(aa) * pow(aa, yy.rpart());
   return temp;
-#endif
 }
 
 template <typename _Tp>
 dual<_Tp>
 pow(const dual<_Tp> & xx, const dual<_Tp> & yy)
 {
+  using std::pow;
   using std::log;
-  using std::exp;
-  return exp(yy * log(xx));
+  dual<_Tp> temp;
+  temp.rpart() = pow(xx.rpart(), yy.rpart());
+  temp.epart() =
+    xx.epart() * yy.rpart() * pow(xx.rpart(), yy.rpart() - _Tp(1)) +
+    yy.epart() * log(xx.rpart()) * pow(xx.rpart(), yy.rpart());
+  return temp;
 }
 #endif
 //template <typename _Tp> dual<_Tp> pow(dual<_Tp> x, dual<_Tp> a) {
@@ -631,8 +670,8 @@ exp(const dual<_Tp> & x)
 {
   using std::exp;
   _Tp deriv;
-  deriv = exp(x.rpart());
-  return dual<_Tp>(deriv, deriv * x.epart());
+  deriv = exp(x.rpart()) * x.epart();
+  return dual<_Tp>(exp(x.rpart()), deriv);
 }
 
 template <typename _Tp>
@@ -759,6 +798,7 @@ sqrt(dual<_Tp> x)
 {
   using std::pow;
   return pow(x, _Tp(0.5));
+  //return pow(x, (typename dual<_Tp>::scalar_type)0.5); xxx
 }
 
 template <typename _Tp>
@@ -869,6 +909,44 @@ floor(const dual<_Tp> & x)
                    f == x.rpart()
                    ? std::numeric_limits<_Tp>::infinity()
                    : _Tp(0));
+}
+
+/// classification
+template <typename _Tp>
+bool isnan(const dual<_Tp> & x)
+{
+  using std::isnan;
+  bool isit = true;
+  for (int ii = 0; isit && ii < dual<_Tp>::num_elem; ii++)
+    isit = isit && isnan(x.part(ii));
+  return isit;
+}
+template <typename _Tp>
+bool isfinite(const dual<_Tp> & x)
+{
+  using std::isfinite;
+  bool isit = true;
+  for (int ii = 0; isit && ii < dual<_Tp>::num_elem; ii++)
+    isit = isit && isfinite(x.part(ii));
+  return isit;
+}
+template <typename _Tp>
+bool isinf(const dual<_Tp> & x)
+{
+  using std::isinf;
+  bool isit = true;
+  for (int ii = 0; isit && ii < dual<_Tp>::num_elem; ii++)
+    isit = isit && isinf(x.part(ii));
+  return isit;
+}
+template <typename _Tp>
+bool isnormal(const dual<_Tp> & x)
+{
+  using std::isnormal;
+  bool isit = true;
+  for (int ii = 0; isit && ii < dual<_Tp>::num_elem; ii++)
+    isit = isit && isnormal(x.part(ii));
+  return isit;
 }
 
 /// comparison

@@ -28,11 +28,11 @@ template<typename _Scalar>
 struct NumTraits<DualNum<_Scalar> > : GenericNumTraits<_Scalar>
 {
   typedef DualNum<_Scalar> Real;
-  typedef DualNum<_Scalar> NonInteger;
+  typedef DualNum<typename NumTraits<_Scalar>::NonInteger> NonInteger;
   typedef DualNum<_Scalar> Nested;
 
   enum {
-    IsInteger           = 0,
+    IsInteger           =   NumTraits<_Scalar>::IsInteger,
     IsSigned            =   NumTraits<_Scalar>::IsSigned,
     IsComplex           =   NumTraits<_Scalar>::IsComplex,
     RequireInitialization = NumTraits<_Scalar>::RequireInitialization,
