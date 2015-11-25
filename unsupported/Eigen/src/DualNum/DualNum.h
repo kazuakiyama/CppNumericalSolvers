@@ -28,6 +28,7 @@ template<typename _Scalar>
 struct NumTraits<DualNum<_Scalar> > : GenericNumTraits<_Scalar>
 {
   typedef DualNum<_Scalar> Real;
+  //typedef _Scalar Real;
   typedef DualNum<typename NumTraits<_Scalar>::NonInteger> NonInteger;
   typedef DualNum<_Scalar> Nested;
 

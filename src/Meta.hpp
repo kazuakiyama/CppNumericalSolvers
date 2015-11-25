@@ -30,7 +30,7 @@
 #include <stdexcept>
 #include <unsupported/Eigen/DualNum>
 
-#define USE_COMPLEX_DUAL
+//#define USE_COMPLEX_DUAL
 
 namespace pwie
 {
@@ -77,7 +77,7 @@ public:
   };
   typedef typename Func::Scalar Scalar;
 #ifdef USE_COMPLEX_DUAL
-  typedef std::complex<Scalar> DualScalar; // todo: use actual dual numbers
+  typedef std::complex<Scalar> DualScalar;
 #else
   typedef Eigen::DualNum<Scalar> DualScalar;
 #endif

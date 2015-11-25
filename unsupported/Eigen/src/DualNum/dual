@@ -314,6 +314,9 @@ public:
 
   // Operations
 
+  /// explicit cast to Scalar type
+  explicit operator _Tp () const { return rpart(); }
+
   /// unitary
   dual<_Tp>
   operator+() const { return *this; }
