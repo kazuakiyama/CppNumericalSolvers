@@ -161,7 +161,6 @@ LbfgsbSolver<Func>::GetGeneralizedCauchyPoint(const InputType & x, JacobianType 
 
     Debug(SortedIndices[0] << " " << SortedIndices[1]);
 
-#pragma omp parallel for
     for(int ii = i; ii < x_cauchy.rows(); ii++)
     {
         x_cauchy(SortedIndices[ii]) = x(SortedIndices[ii])

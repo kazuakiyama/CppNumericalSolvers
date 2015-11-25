@@ -239,19 +239,15 @@ public:
 #endif
     const size_t DIM = x.rows();
     JacobianType gg(DIM);
-#pragma omp parallel
-    {
-      DualInputType xx = x.template cast<DualScalar>();
-#pragma omp for
-      for (size_t i = 0; i < DIM; i++) {
-        xx[i] += eps;
+    DualInputType xx = x.template cast<DualScalar>();
+    for (size_t i = 0; i < DIM; i++) {
+      xx[i] += eps;
 #ifdef USE_COMPLEX_DUAL
-        gg[i] = imag(_func.f(xx)) / imag(eps);
+      gg[i] = imag(_func.f(xx)) / imag(eps);
 #else
-        gg[i] = _func.f(xx).epart();
+      gg[i] = _func.f(xx).epart();
 #endif
-        xx[i] = x[i];
-      }
+      xx[i] = x[i];
     }
     grad = gg;
   }
@@ -264,18 +260,14 @@ public:
     std::cerr << "gFD, eps=" << eps << "\n";
     const size_t DIM = x.rows();
     typename Func::JacobianType finite(DIM);
-#pragma omp parallel
-    {
-      typename Func::InputType xx = x;
-      typename Func::InputType xy = x;
-#pragma omp for
-      for(size_t i = 0; i < DIM; i++) {
-        xx[i] += eps;
-        xy[i] -= eps;
-        finite[i] = (_func.f(xx) - _func.f(xy)) / (2.0 * eps);
-        xx[i] = x[i];
-        xy[i] = x[i];
-      }
+    typename Func::InputType xx = x;
+    typename Func::InputType xy = x;
+    for(size_t i = 0; i < DIM; i++) {
+      xx[i] += eps;
+      xy[i] -= eps;
+      finite[i] = (_func.f(xx) - _func.f(xy)) / (2.0 * eps);
+      xx[i] = x[i];
+      xy[i] = x[i];
     }
     grad = finite;
   }
