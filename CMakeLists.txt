@@ -74,12 +74,7 @@ add_custom_command (OUTPUT "gtest-1.7.0/src/gtest-all.cc"
 include_directories (${CMAKE_BINARY_DIR}/gtest-1.7.0/include)
 
 # ASA_CG install
-set (ASA_VER "ASA_CG-3.0")
-add_custom_command (OUTPUT ${ASA_VER}/asa_cg.c
-  COMMAND wget http://users.clas.ufl.edu/hager/papers/CG/Archive/${ASA_VER}.tar.gz
-  COMMAND tar xvf ${ASA_VER}.tar.gz
-  COMMAND rm -Rf ${ASA_VER}.tar.gz
-  )
+set (ASA_VER "ASA_CG")
 
 # gtest
 include_directories (${CMAKE_BINARY_DIR}/gtest-1.7.0)
