@@ -22,6 +22,11 @@ template <class eT> using DualNum = cxxduals::dual<eT>;
 } // namespace Eigen
 
 #include <Eigen/Core>
+
+#ifndef EIGEN_DEVICE_FUNC
+#define EIGEN_DEVICE_FUNC
+#endif
+
 namespace Eigen {
 
 template<typename _Scalar>
