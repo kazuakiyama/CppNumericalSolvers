@@ -29,7 +29,7 @@
 // file is based.
 //
 // The cxxdual package is available on github, bug reports and feature
-// submissions welcome!
+// additions welcome!
 //
 //  https://github.com/tesch1/cxxduals
 //
@@ -39,16 +39,81 @@
 #include <cmath>
 #include <ctgmath>
 #include <sstream>
-#include <complex>
 #include <limits>
 #include <type_traits>
 #include <initializer_list>
+
+namespace std {
+// forward declaration of std::complex
+template <typename _Tp> class complex;
+}
 
 // check if constexpr exists
 #if __cplusplus >= 201103L
 #define CXXDUALS_CONSTEXPR constexpr
 #else
 #define CXXDUALS_CONSTEXPR const
+#endif
+
+#ifdef __CUDACC__
+#define DUAL_DEVICE_FUNC __host__ __device__
+#define DUAL_STD_MATH(FUNC) using ::FUNC
+
+#include <float.h>
+#ifndef NPP_MIN_8U
+#include <nppdefs.h>
+#undef NV_NPPIDEFS_H
+#endif
+#include <math_constants.h>
+
+template <typename T> struct numeric_limits;
+
+template <> struct numeric_limits<float>
+{
+  __device__ __forceinline__ static float 
+  quiet_NaN() { return CUDART_NAN_F; };
+  __device__ __forceinline__ static float 
+  infinity() { return CUDART_INF_F; };
+  __device__ __forceinline__ static float 
+  epsilon() { return FLT_EPSILON; };
+ 
+  __device__ __forceinline__ static float 
+  min() { return NPP_MINABS_32F; };
+  __device__ __forceinline__ static float 
+  max() { return NPP_MAXABS_32F; };
+};
+
+template <> struct numeric_limits<double>
+{
+  __device__ __forceinline__ static double 
+  quiet_NaN() { return CUDART_NAN; };
+  __device__ __forceinline__ static double 
+  infinity() { return CUDART_INF; };
+  __device__ __forceinline__ static double 
+  epsilon() { return DBL_EPSILON; };
+ 
+  __device__ __forceinline__ static double 
+  min() { return NPP_MINABS_64F; };
+  __device__ __forceinline__ static double 
+  max() { return NPP_MAXABS_64F; };
+};
+
+template <> struct numeric_limits<short>
+{
+  __device__ __forceinline__ static short 
+  max() { return SHRT_MAX; };
+};
+
+template <typename _Tp>
+bool isnormal(const _Tp & x)
+{
+  // maybe not exactly right?
+  return !(x==0.0 || isnan(x) || isinf(x) || isfinite(x));
+}
+
+#else
+#define DUAL_DEVICE_FUNC
+#define DUAL_STD_MATH(FUNC) using std::FUNC
 #endif
 
 /* dual-numbers implementation for calculation of differentials */
@@ -172,32 +237,40 @@ public:
   static const int num_elem = dual_trait_helper<dual<_Tp> >::num_elem;
 
   /// Constructors
+  DUAL_DEVICE_FUNC
   CXXDUALS_CONSTEXPR dual()
     : _f0(), _f1() { }
 
+  DUAL_DEVICE_FUNC
   CXXDUALS_CONSTEXPR dual(const _Tp & f0)
     : _f0(f0), _f1() { }
 
+  DUAL_DEVICE_FUNC
   CXXDUALS_CONSTEXPR dual(const _Tp & f0, const _Tp & f1)
     : _f0(f0), _f1(f1) { }
 
   template <typename _Up,
             typename _Ux = typename internal::arg_filter2<_Up>::test >
+  DUAL_DEVICE_FUNC
   CXXDUALS_CONSTEXPR dual(const _Up & f0)
     : _f0(f0), _f1() { }
 
   template <typename _Up, typename _Vp, 
             typename _Ux = typename internal::arg_filter2<_Up>::test,
             typename _Vx = typename internal::arg_filter2<_Vp>::test >
+  DUAL_DEVICE_FUNC
   CXXDUALS_CONSTEXPR dual(const _Up & f0, const _Vp & f1)
     : _f0(f0), _f1(f1) { }
 
 #if __cplusplus >= 201103L
+  DUAL_DEVICE_FUNC
   dual(std::initializer_list<basic_value_type> ll)
     : _f0(), _f1()
   {
+#ifndef __CUDACC__
     if (ll.size() > num_elem)
       throw std::exception();
+#endif
     int ii = 0;
     for (auto it = ll.begin(); it != ll.end(); it++, ii++)
       part(ii) = *it;
@@ -205,23 +278,28 @@ public:
 #endif
 
   template<typename _Up>
+  DUAL_DEVICE_FUNC
   explicit CXXDUALS_CONSTEXPR dual(const dual<_Up> & rhs)
     : _f0(rhs.rpart()), _f1(rhs.epart()) { }
 
   /// Part extraction
 #if __cplusplus >= 201103L
+  DUAL_DEVICE_FUNC
   constexpr _Tp 
   rpart() const { return _f0; }
 
+  DUAL_DEVICE_FUNC
   constexpr _Tp 
   epart() const { return _f1; }
 
 private:
+  DUAL_DEVICE_FUNC
   constexpr basic_value_type
   private_part(int p, std::false_type) const {
     // p had better be either 0 or 1
     return p == 0 ? _f0 : _f1;
   }
+  DUAL_DEVICE_FUNC
   constexpr basic_value_type
   private_part(int p, std::true_type) const {
     return p < (num_elem / 2)
@@ -229,49 +307,62 @@ private:
                : _f1.part(p - (dual_trait_helper<dual<_Tp> >::num_elem / 2));
   }
 public:
+  DUAL_DEVICE_FUNC
   constexpr basic_value_type
   part(int p) const {
     return private_part(p, typename dual_trait_helper<_Tp>::is_dual());
   }
 #else
+  DUAL_DEVICE_FUNC
   inline const _Tp &
   rpart() const { return _f0; }
 
+  DUAL_DEVICE_FUNC
   inline const _Tp &
   epart() const { return _f1; }
 #endif
 
+  DUAL_DEVICE_FUNC
   inline _Tp &
   rpart() { return _f0; }
 
+  DUAL_DEVICE_FUNC
   inline _Tp &
   epart() { return _f1; }
 
 private:
+  DUAL_DEVICE_FUNC
   inline basic_value_type &
   private_part(int p, std::false_type) {
     return p == 0 ? _f0 : _f1;
   }
+
+  DUAL_DEVICE_FUNC
   inline basic_value_type &
   private_part(int p, std::true_type) {
     return p < (num_elem / 2)
                ? _f0.part(p)
                : _f1.part(p - (dual_trait_helper<dual<_Tp> >::num_elem / 2));
   }
+
 public:
+  DUAL_DEVICE_FUNC
   inline basic_value_type &
   part(int p) {
     return private_part(p, typename dual_trait_helper<_Tp>::is_dual());
   }
 
   /// Part assignment
+  DUAL_DEVICE_FUNC
   inline void
   rpart(_Tp f0) { _f0 = f0; }
 
+  DUAL_DEVICE_FUNC
   inline void
   epart(_Tp f1) { _f1 = f1; }
 
 private:
+  DUAL_DEVICE_FUNC
   inline void
   private_part(int p, const basic_value_type & v, std::false_type) {
     if (p == 0)
@@ -279,6 +370,8 @@ private:
     else
       _f1 = v;
   }
+
+  DUAL_DEVICE_FUNC
   inline void
   private_part(int p, const basic_value_type & v, std::true_type) {
     if (p < (num_elem / 2))
@@ -286,7 +379,10 @@ private:
     else
       _f1.part(p - (dual_trait_helper<dual<_Tp> >::num_elem / 2), v);
   }
+
 public:
+
+  DUAL_DEVICE_FUNC
   inline void
   part(int p, const basic_value_type & v) {
     private_part(p, v, typename dual_trait_helper<_Tp>::is_dual());
@@ -294,34 +390,41 @@ public:
 
   /// Assignment
 #if 0
+  DUAL_DEVICE_FUNC
   inline dual<_Tp> &
   operator=(const _Tp & rhs) { _f0 = rhs; _f1 = _Tp(); return *this; }
 #endif
 
   template <typename _Up,
             typename _Ux = typename internal::arg_filter2<_Up>::test >
+  DUAL_DEVICE_FUNC
   inline dual<_Tp> &
   operator=(const _Up & f0) { _f0 = f0; _f1 = _Tp(); return *this; }
 
 #if 0
+  DUAL_DEVICE_FUNC
   inline dual<_Tp> &
   operator=(const dual<_Tp> & rhs) { _f0 = rhs._f0; _f1 = rhs._f1; return *this; }
 #endif
 
   template<typename _Up>
+  DUAL_DEVICE_FUNC
   inline dual<_Tp> &
   operator=(const dual<_Up> & rhs) { _f0 = rhs.rpart(); _f1 = rhs.epart(); return *this; }
 
   // Operations
 
   /// explicit cast to Scalar type
+  DUAL_DEVICE_FUNC
   explicit operator _Tp () const { return rpart(); }
 
   /// unitary
+  DUAL_DEVICE_FUNC
   dual<_Tp>
   operator+() const { return *this; }
 
   /// unitary negation
+  DUAL_DEVICE_FUNC
   dual<_Tp>
   operator-() const
   {
@@ -329,6 +432,7 @@ public:
   }
 
   /// addition
+  DUAL_DEVICE_FUNC
   dual<_Tp> &
   operator+=(const _Tp & rhs)
   {
@@ -337,6 +441,7 @@ public:
   }
 
   template<typename _Up>
+  DUAL_DEVICE_FUNC
   dual<_Tp> &
   operator+=(const dual<_Up> & rhs)
   {
@@ -346,6 +451,7 @@ public:
   }
 
   /// subtraction
+  DUAL_DEVICE_FUNC
   dual<_Tp> &
   operator-=(const _Tp & rhs)
   {
@@ -354,6 +460,7 @@ public:
   }
 
   template<typename _Up>
+  DUAL_DEVICE_FUNC
   dual<_Tp> &
   operator-=(const dual<_Up> & rhs)
   {
@@ -363,6 +470,7 @@ public:
   }
 
   /// multiplication
+  DUAL_DEVICE_FUNC
   dual<_Tp> &
   operator*=(const _Tp & rhs)
   {
@@ -372,6 +480,7 @@ public:
   }
 
   template<typename _Up>
+  DUAL_DEVICE_FUNC
   dual<_Tp> &
   operator*=(const dual<_Up> & rhs)
   {
@@ -387,6 +496,7 @@ public:
   }
 
   /// division
+  DUAL_DEVICE_FUNC
   dual<_Tp> &
   operator/=(const _Tp & rhs)
   {
@@ -396,6 +506,7 @@ public:
   }
 
   template<typename _Up>
+  DUAL_DEVICE_FUNC
   dual<_Tp> &
   operator/=(const dual<_Up> & rhs)
   {
@@ -425,6 +536,7 @@ public:
 /// Value extraction
 //@{
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 inline _Tp
 rpart(const dual<_Tp> & d)
 {
@@ -432,6 +544,7 @@ rpart(const dual<_Tp> & d)
 }
 
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 inline _Tp
 rpart(const _Tp & d)
 {
@@ -439,6 +552,7 @@ rpart(const _Tp & d)
 }
 
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 inline _Tp
 epart(const dual<_Tp> & d)
 {
@@ -450,6 +564,7 @@ epart(const dual<_Tp> & d)
 #if 0
 #define DUALH_DEFINE_BASIC_OP_TEMPLATES(OP)                     \
   template <typename _Tp>                                       \
+  DUAL_DEVICE_FUNC                                              \
   inline dual<_Tp>                                              \
   operator OP (const dual<_Tp> & lhs, const dual<_Tp> & rhs)    \
   {                                                             \
@@ -459,6 +574,7 @@ epart(const dual<_Tp> & d)
   }                                                             \
   /* down one */                                                \
   template <typename _Tp>                                       \
+  DUAL_DEVICE_FUNC                                              \
   inline dual<_Tp>                                              \
   operator OP(const dual<_Tp> & lhs, const _Tp & rhs)           \
   {                                                             \
@@ -467,6 +583,7 @@ epart(const dual<_Tp> & d)
     return d;                                                   \
   }                                                             \
   template <typename _Tp>                                       \
+  DUAL_DEVICE_FUNC                                              \
   inline dual<_Tp>                                              \
   operator OP(const _Tp & lhs, const dual<_Tp> & rhs)           \
   {                                                             \
@@ -476,6 +593,7 @@ epart(const dual<_Tp> & d)
   }                                                             \
   /* dual nesting */                                            \
   template <typename _Tp>                                       \
+  DUAL_DEVICE_FUNC                                              \
   inline dual<_Tp>                                              \
   operator OP(const dual<_Tp> & lhs, const typename _Tp::value_type & rhs) \
   {                                                             \
@@ -484,6 +602,7 @@ epart(const dual<_Tp> & d)
     return d;                                                   \
   }                                                             \
   template <typename _Tp>                                       \
+  DUAL_DEVICE_FUNC                                              \
   inline dual<_Tp>                                              \
   operator OP(const typename _Tp::value_type & lhs, const dual<_Tp> & rhs) \
   {                                                             \
@@ -530,6 +649,7 @@ template <typename _Tp, typename _Up> using result_type = presult_type<_Tp, _Up>
 }
 #define DUALH_DEFINE_BASIC_OP_TEMPLATES(OP)                     \
   template <typename _Tp>                                       \
+  DUAL_DEVICE_FUNC                                              \
   inline dual<_Tp>                                              \
   operator OP (const dual<_Tp> & lhs, const dual<_Tp> & rhs)    \
   {                                                             \
@@ -539,6 +659,7 @@ template <typename _Tp, typename _Up> using result_type = presult_type<_Tp, _Up>
   }                                                             \
   /* down one */                                                \
   template <typename _Tp, typename _Up>                         \
+  DUAL_DEVICE_FUNC                                              \
   inline typename internal::result_type<_Tp,_Up>::dual_type     \
   operator OP(const dual<_Tp> & lhs, const _Up & rhs)           \
   {                                                             \
@@ -547,6 +668,7 @@ template <typename _Tp, typename _Up> using result_type = presult_type<_Tp, _Up>
     return d;                                                   \
   }                                                             \
   template <typename _Tp, typename _Up>                         \
+  DUAL_DEVICE_FUNC                                              \
   inline typename internal::result_type<_Tp,_Up>::dual_type     \
   operator OP(const _Up & lhs, const dual<_Tp> & rhs)           \
   {                                                             \
@@ -587,6 +709,7 @@ DUALH_DEFINE_BASIC_OP_TEMPLATES(/)
 // for += -= *= /= on non-dual numbers, only on certain types!
 #define DUALH_DEFINE_NONDUAL_OP_TEMPLATE(OP)                    \
   template <typename _Tp, typename _Up>                         \
+  DUAL_DEVICE_FUNC                                              \
   inline typename internal::result_type<_Tp,_Up>::res_type      \
   operator OP (_Up & lhs, const dual<_Tp> & rhs)                \
   {                                                             \
@@ -608,12 +731,13 @@ DUALH_DEFINE_NONDUAL_OP_TEMPLATE(/=)
 #endif
 
 template <typename _Tp, typename _Up>
+DUAL_DEVICE_FUNC
 dual<_Tp>
 pow(const dual<_Tp> & xx, const _Up & aa)
 {
-  using std::pow;
-  using std::abs;
-  using std::exp;
+  DUAL_STD_MATH(pow);
+  DUAL_STD_MATH(abs);
+  DUAL_STD_MATH(exp);
   dual<_Tp> temp;
 #if 0
   _Tp deriv, xval, tol;
@@ -638,11 +762,12 @@ pow(const dual<_Tp> & xx, const _Up & aa)
 }
 #if 1
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 dual<_Tp>
 pow(const _Tp & aa, const dual<_Tp> & yy)
 {
-  using std::pow;
-  using std::log;
+  DUAL_STD_MATH(pow);
+  DUAL_STD_MATH(log);
   dual<_Tp> temp;
   temp.rpart() = pow(aa, yy.rpart());
   temp.epart() = yy.epart() * log(aa) * pow(aa, yy.rpart());
@@ -650,11 +775,12 @@ pow(const _Tp & aa, const dual<_Tp> & yy)
 }
 
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 dual<_Tp>
 pow(const dual<_Tp> & xx, const dual<_Tp> & yy)
 {
-  using std::pow;
-  using std::log;
+  DUAL_STD_MATH(pow);
+  DUAL_STD_MATH(log);
   dual<_Tp> temp;
   temp.rpart() = pow(xx.rpart(), yy.rpart());
   temp.epart() =
@@ -668,31 +794,34 @@ pow(const dual<_Tp> & xx, const dual<_Tp> & yy)
 //}
 
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 dual<_Tp>
 exp(const dual<_Tp> & x)
 {
-  using std::exp;
+  DUAL_STD_MATH(exp);
   _Tp deriv;
   deriv = exp(x.rpart()) * x.epart();
   return dual<_Tp>(exp(x.rpart()), deriv);
 }
 
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 dual<_Tp>
 log(dual<_Tp> x)
 {
-  using std::log;
+  DUAL_STD_MATH(log);
   _Tp deriv1;
   deriv1 = x.epart() / x.rpart();
   return dual<_Tp>(log(x.rpart()), deriv1);
 }
 
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 inline dual<_Tp>
 sin(dual<_Tp> x)
 {
-  using std::sin;
-  using std::cos;
+  DUAL_STD_MATH(sin);
+  DUAL_STD_MATH(cos);
   dual<_Tp> temp;
   _Tp funval, deriv;
   funval = sin(x.rpart());
@@ -703,11 +832,12 @@ sin(dual<_Tp> x)
 }
 
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 inline dual<_Tp>
 cos(dual<_Tp> x)
 {
-  using std::sin;
-  using std::cos;
+  DUAL_STD_MATH(sin);
+  DUAL_STD_MATH(cos);
   dual<_Tp> temp;
   _Tp funval, deriv;
   funval = cos(x.rpart());
@@ -718,9 +848,11 @@ cos(dual<_Tp> x)
 }
 
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 inline dual<_Tp>
 tan(dual<_Tp> x)
 {
+  DUAL_STD_MATH(tan);
   dual<_Tp> temp;
   _Tp funval, deriv;
   funval = tan(x.rpart());
@@ -731,11 +863,12 @@ tan(dual<_Tp> x)
 }
 
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 dual<_Tp>
 asin(dual<_Tp> x)
 {
-  using std::asin;
-  using std::sqrt;
+  DUAL_STD_MATH(asin);
+  DUAL_STD_MATH(sqrt);
   dual<_Tp> temp;
   _Tp funval, deriv1, deriv;
   funval = asin(x.rpart());
@@ -748,11 +881,12 @@ asin(dual<_Tp> x)
 
 #if 0
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 dual<_Tp>
 acos(dual<_Tp> x)
 {
-  using std::acos;
-  using std::sqrt;
+  DUAL_STD_MATH(acos);
+  DUAL_STD_MATH(sqrt);
   dual<_Tp> temp;
   _Tp funval, deriv1, deriv;
   funval = acos(x.rpart());
@@ -765,10 +899,11 @@ acos(dual<_Tp> x)
 #endif
 
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 dual<_Tp>
 atan(dual<_Tp> x)
 {
-  using std::atan;
+  DUAL_STD_MATH(atan);
   dual<_Tp> temp;
   _Tp funval, deriv1, deriv;
   funval = atan(x.rpart());
@@ -780,10 +915,11 @@ atan(dual<_Tp> x)
 }
 
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 dual<_Tp>
 atan2(dual<_Tp> y, dual<_Tp> x)
 {
-  using std::atan2;
+  DUAL_STD_MATH(atan2);
   dual<_Tp> temp;
   _Tp funval, deriv1, deriv;
   funval = atan2(y.rpart(), x.rpart());
@@ -796,15 +932,17 @@ atan2(dual<_Tp> y, dual<_Tp> x)
 }
 
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 dual<_Tp>
 sqrt(dual<_Tp> x)
 {
-  using std::pow;
+  DUAL_STD_MATH(pow);
   return pow(x, _Tp(0.5));
   //return pow(x, (typename dual<_Tp>::scalar_type)0.5); xxx
 }
 
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 dual<_Tp>
 max(dual<_Tp> x1, dual<_Tp> x2)
 {
@@ -812,6 +950,7 @@ max(dual<_Tp> x1, dual<_Tp> x2)
 }
 
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 dual<_Tp>
 max(dual<_Tp> x1, _Tp x2)
 {
@@ -819,6 +958,7 @@ max(dual<_Tp> x1, _Tp x2)
 }
 
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 dual<_Tp>
 max(_Tp x1, dual<_Tp> x2)
 {
@@ -826,6 +966,7 @@ max(_Tp x1, dual<_Tp> x2)
 }
 
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 dual<_Tp>
 min(dual<_Tp> x1, dual<_Tp> x2)
 {
@@ -833,6 +974,7 @@ min(dual<_Tp> x1, dual<_Tp> x2)
 }
 
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 dual<_Tp>
 min(dual<_Tp> x1, _Tp x2)
 {
@@ -840,6 +982,7 @@ min(dual<_Tp> x1, _Tp x2)
 }
 
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 dual<_Tp>
 min(_Tp x1, dual<_Tp> x2)
 {
@@ -848,17 +991,19 @@ min(_Tp x1, dual<_Tp> x2)
 
 #if 0
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 dual<_Tp>
 conj(const dual<_Tp> & x)
 {
   // todo - dont just make things up
-  using std::conj;
+  DUAL_STD_MATH(conj);
   return dual<_Tp>(conj(x.rpart()),
                    conj(x.epart()));
 }
 #endif
 
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 dual<_Tp>
 real(const dual<_Tp> & x)
 {
@@ -868,6 +1013,7 @@ real(const dual<_Tp> & x)
 }
 
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 dual<_Tp>
 imag(const dual<_Tp> & x)
 {
@@ -876,15 +1022,17 @@ imag(const dual<_Tp> & x)
 }
 
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 inline dual<_Tp>
 abs(const dual<_Tp> & x)
 {
-  using std::abs;
-  // wrong for complex
+  DUAL_STD_MATH(abs);
+  // wrong for _Tp=complex
   return abs(x.rpart()) == x.rpart() ? x : -x;
 }
 
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 dual<_Tp>
 abs2(const dual<_Tp> & x)
 {
@@ -892,60 +1040,72 @@ abs2(const dual<_Tp> & x)
 }
 
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 dual<_Tp>
 ceil(const dual<_Tp> & x)
 {
-  using std::ceil;
+  DUAL_STD_MATH(ceil);
+  DUAL_STD_MATH(numeric_limits);
   _Tp c = ceil(x.rpart());
   return dual<_Tp>(c,
-                   c == x.rpart()
-                   ? std::numeric_limits<_Tp>::infinity()
+                   c == x.rpart() ?
+                   numeric_limits<_Tp>::infinity()
                    : _Tp(0));
 }
 
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 dual<_Tp>
 floor(const dual<_Tp> & x)
 {
+  DUAL_STD_MATH(floor);
+  DUAL_STD_MATH(numeric_limits);
   _Tp f = floor(x.rpart());
   return dual<_Tp>(f,
                    f == x.rpart()
-                   ? std::numeric_limits<_Tp>::infinity()
+                   ? numeric_limits<_Tp>::infinity()
                    : _Tp(0));
 }
 
 /// classification
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 bool isnan(const dual<_Tp> & x)
 {
-  using std::isnan;
+  DUAL_STD_MATH(isnan);
   bool isit = true;
   for (int ii = 0; isit && ii < dual<_Tp>::num_elem; ii++)
     isit = isit && isnan(x.part(ii));
   return isit;
 }
+
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 bool isfinite(const dual<_Tp> & x)
 {
-  using std::isfinite;
+  DUAL_STD_MATH(isfinite);
   bool isit = true;
   for (int ii = 0; isit && ii < dual<_Tp>::num_elem; ii++)
     isit = isit && isfinite(x.part(ii));
   return isit;
 }
+
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 bool isinf(const dual<_Tp> & x)
 {
-  using std::isinf;
+  DUAL_STD_MATH(isinf);
   bool isit = true;
   for (int ii = 0; isit && ii < dual<_Tp>::num_elem; ii++)
     isit = isit && isinf(x.part(ii));
   return isit;
 }
+
 template <typename _Tp>
+DUAL_DEVICE_FUNC
 bool isnormal(const dual<_Tp> & x)
 {
-  using std::isnormal;
+  DUAL_STD_MATH(isnormal);
   bool isit = true;
   for (int ii = 0; isit && ii < dual<_Tp>::num_elem; ii++)
     isit = isit && isnormal(x.part(ii));
@@ -955,18 +1115,21 @@ bool isnormal(const dual<_Tp> & x)
 /// comparison
 #define DUALH_COMPARISON_OP(OP)                                 \
   template <typename _Tp, typename _Up>                         \
+  DUAL_DEVICE_FUNC                                              \
   inline bool                                                   \
   operator OP (const dual<_Tp> & lhs, const dual<_Up> & rhs)    \
   {                                                             \
     return lhs.rpart() OP rhs.rpart();                          \
   }                                                             \
   template <typename _Tp, typename _Up>                         \
+  DUAL_DEVICE_FUNC                                              \
   inline typename internal::result_type<_Tp,_Up>::comp_type     \
   operator OP (const dual<_Tp> & lhs, const _Up & rhs)          \
   {                                                             \
     return lhs.rpart() OP rhs;                                  \
   }                                                             \
   template <typename _Tp, typename _Up>                         \
+  DUAL_DEVICE_FUNC                                              \
   inline typename internal::result_type<_Tp,_Up>::comp_type     \
   operator OP (const _Up & lhs, const dual<_Tp> & rhs)          \
   {                                                             \
@@ -1005,5 +1168,7 @@ operator<<(std::basic_ostream<_CharT, _Traits>& os, const dual<_Tp>& rhs)
 #endif
 
 } // namespace cxxduals
+
+#undef DUAL_DEVICE_FUNC
 
 #endif // LIB_CXXDUALS

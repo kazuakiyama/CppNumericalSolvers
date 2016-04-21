@@ -22,6 +22,11 @@ template <class eT> using DualNum = cxxduals::dual<eT>;
 } // namespace Eigen
 
 #include <Eigen/Core>
+
+#ifndef EIGEN_DEVICE_FUNC
+#define EIGEN_DEVICE_FUNC
+#endif
+
 namespace Eigen {
 
 template<typename _Scalar>
@@ -42,7 +47,9 @@ struct NumTraits<DualNum<_Scalar> > : GenericNumTraits<_Scalar>
     MulCost             = 4 * NumTraits<_Scalar>::MulCost + 2 * NumTraits<_Scalar>::AddCost
   };
 
+  EIGEN_DEVICE_FUNC
   static inline Real epsilon()          { return Real(NumTraits<_Scalar>::epsilon()); }
+  EIGEN_DEVICE_FUNC
   static inline Real dummy_precision()  { return Real(NumTraits<_Scalar>::dummy_precision()); }
 };
 
@@ -67,18 +74,27 @@ template<typename T> struct scalar_product_traits<DualNum<T>, T> {
 template <typename _Tp>
 struct conj_helper<DualNum<_Tp>, _Tp, false, false>
 {
-  EIGEN_STRONG_INLINE DualNum<_Tp> pmadd(const DualNum<_Tp> & x, const DualNum<_Tp> & y,
-                                         const DualNum<_Tp>& c) const
-  { return x * y + c; }
+  EIGEN_DEVICE_FUNC
+  EIGEN_STRONG_INLINE
+  DualNum<_Tp> pmadd(const DualNum<_Tp> & x, const DualNum<_Tp> & y,
+                     const DualNum<_Tp>& c) const
+  {
+    return x * y + c;
+  }
 
-  EIGEN_STRONG_INLINE DualNum<_Tp> pmul(const DualNum<_Tp> & a, const DualNum<_Tp> & b) const
-  { return a * b; }
+  EIGEN_DEVICE_FUNC
+  EIGEN_STRONG_INLINE
+  DualNum<_Tp> pmul(const DualNum<_Tp> & a, const DualNum<_Tp> & b) const
+  {
+    return a * b;
+  }
 };
 
 // Eigen needs this to print
 template <typename _Tp>
 struct cast_impl<DualNum<_Tp>, int>
 {
+  EIGEN_DEVICE_FUNC
   static inline int run(const DualNum<_Tp> & x) {
     return int(x.part(0));
   }
