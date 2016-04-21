@@ -1,4 +1,4 @@
-// -*- c++- *-
+// -*- c++ -*-
 // This file is part of Eigen, a lightweight C++ template library
 // for linear algebra.
 //
@@ -11,7 +11,7 @@
 #ifndef EIGEN_MATIO_MODULE
 #define EIGEN_MATIO_MODULE
 
-#include "matio.h"
+#include <matio.h>
 #ifndef MATIO_VERSION
 #define MATIO_VERSION (MATIO_MAJOR_VERSION * 100 + MATIO_MINOR_VERSION * 10 + MATIO_RELEASE_LEVEL)
 #endif
