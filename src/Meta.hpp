@@ -133,9 +133,20 @@ public:
     constraints(x, g, has_member_func_gradient<Func>());
   }
 
+  inline bool get_bounds_info(int m, double * g_l, double * g_u) const
+  {
+    return _func.get_bounds_info(m, g_l, g_u);
+  }
+
+  inline bool eval_g(int n, const double * x, bool new_x, int m, double * g) const
+  {
+    return _func.eval_g(n, x, new_x, m, g);
+  }
+
   inline bool eval_jac_g(int n, const double * x, bool new_x,
                          int m, int nele_jac, int * iRow, int * jCol,
-                         double * values) const {
+                         double * values) const
+  {
     return _func.eval_jac_g(n, x, new_x, m, nele_jac, iRow, jCol, values);
   }
 
