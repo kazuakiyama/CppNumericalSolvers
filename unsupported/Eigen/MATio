@@ -10,8 +10,10 @@
 //
 #ifndef EIGEN_MATIO_MODULE
 #define EIGEN_MATIO_MODULE
+
+#include <matio.h>
 #include <sstream>
-#include "matio.h"
+
 #ifndef MATIO_VERSION
 #define MATIO_VERSION (MATIO_MAJOR_VERSION * 100 + MATIO_MINOR_VERSION * 10 + MATIO_RELEASE_LEVEL)
 #endif

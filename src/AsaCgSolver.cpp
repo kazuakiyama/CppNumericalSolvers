@@ -90,8 +90,8 @@ AsaCgSolver<Func>::internalSolve(InputType & x0)
 {
     int DIM = x0.rows();
 
-    _lb = _functor.getLowerBound(DIM);
-    _ub = _functor.getUpperBound(DIM);
+    _lb = _functor.getLowerBound();
+    _ub = _functor.getUpperBound();
 
     /* if you want to change parameter value, you need the following: */
     asacg_parm cgParm;

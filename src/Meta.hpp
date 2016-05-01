@@ -118,7 +118,8 @@ private:
   inline void gradient(const InputType & x, JacobianType & grad, std::false_type) const { gradientDual(x, grad); }
 public:
   // return the gradient/jacobian
-  inline void gradient(const InputType & x, JacobianType & grad) const {
+  inline void gradient(const InputType & x, JacobianType & grad) const
+  {
     gradient(x, grad, has_member_func_gradient<Func>());
   }
 
@@ -129,13 +130,15 @@ private:
   inline void constraints(const InputType & x, Eigen::VectorXd & g, std::false_type) const { g.resize(0); }
 public:
   // return the gradient/jacobian
-  inline void constraints(const InputType & x, Eigen::VectorXd & g) const {
+  inline void constraints(const InputType & x, Eigen::VectorXd & g) const
+  {
     constraints(x, g, has_member_func_gradient<Func>());
   }
 
-  inline bool get_bounds_info(int m, double * g_l, double * g_u) const
+  inline bool get_bounds_info(int n, double * x_l, double * x_u,
+                              int m, double * g_l, double * g_u) const
   {
-    return _func.get_bounds_info(m, g_l, g_u);
+    return _func.get_bounds_info(n, x_l, x_u, m, g_l, g_u);
   }
 
   inline bool eval_g(int n, const double * x, bool new_x, int m, double * g) const
@@ -162,29 +165,23 @@ public:
   }
 
 private:
-  CREATE_MEMBER_FUNC_SIG_CHECK(getLowerBound, InputType (T::*)(int DIM) const, getLowerBound);
-  inline InputType getLowerBound(int DIM, std::true_type) const {
-    return _func.getLowerBound(DIM);
-  }
-  inline InputType getLowerBound(int DIM, std::false_type) const {
-    return -std::numeric_limits<Scalar>::max() * InputType::Ones(DIM);
+  CREATE_MEMBER_FUNC_SIG_CHECK(getLowerBound, InputType (T::*)() const, getLowerBound);
+  inline InputType getLowerBound(std::true_type) const {
+    return _func.getLowerBound();
   }
 public:
-  virtual InputType getLowerBound(int DIM=Func::InputDim) const {
-    return getLowerBound(DIM, has_member_func_getLowerBound<Func>());
+  virtual InputType getLowerBound() const {
+    return getLowerBound(has_member_func_getLowerBound<Func>());
   }
 
 private:
-  CREATE_MEMBER_FUNC_SIG_CHECK(getUpperBound, InputType (T::*)(int DIM) const, getUpperBound);
-  inline InputType getUpperBound(int DIM, std::true_type) const {
-    return _func.getUpperBound(DIM);
-  }
-  inline InputType getUpperBound(int DIM, std::false_type) const {
-    return  std::numeric_limits<Scalar>::max() * InputType::Ones(DIM);
+  CREATE_MEMBER_FUNC_SIG_CHECK(getUpperBound, InputType (T::*)() const, getUpperBound);
+  inline InputType getUpperBound(std::true_type) const {
+    return _func.getUpperBound();
   }
 public:
-  virtual InputType getUpperBound(int DIM=Func::InputDim) const {
-    return getUpperBound(DIM, has_member_func_getUpperBound<Func>());
+  virtual InputType getUpperBound() const {
+    return getUpperBound(has_member_func_getUpperBound<Func>());
   }
 
 private:

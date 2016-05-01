@@ -274,8 +274,8 @@ LbfgsbSolver<Func>::internalSolve(InputType & x0)
 {
     _DIM = x0.rows();
 
-    _lb = _functor.getLowerBound(_DIM);
-    _ub = _functor.getUpperBound(_DIM);
+    _lb = _functor.getLowerBound();
+    _ub = _functor.getUpperBound();
     theta = 1.0;
 
     W = MatrixX::Zero(_DIM, 0);
