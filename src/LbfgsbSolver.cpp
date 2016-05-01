@@ -276,8 +276,8 @@ LbfgsbSolver<Func>::internalSolve(InputType & x0)
 
     _lb = _functor.getLowerBound();
     _ub = _functor.getUpperBound();
-    if (_lb.size() == 0) _lb = std::numeric_limits<Scalar>::min() * InputType::Ones(_DIM);
-    if (_ub.size() == 0) _ub = std::numeric_limits<Scalar>::max() * InputType::Ones(_DIM);
+    if (_lb.size() == 0) _lb = std::numeric_limits<Scalar>::lowest() * InputType::Ones(_DIM);
+    if (_ub.size() == 0) _ub = std::numeric_limits<Scalar>::max()    * InputType::Ones(_DIM);
     theta = 1.0;
 
     W = MatrixX::Zero(_DIM, 0);

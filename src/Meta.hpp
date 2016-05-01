@@ -166,12 +166,15 @@ public:
 
 private:
   CREATE_MEMBER_FUNC_SIG_CHECK(getLowerBound, InputType (T::*)() const, getLowerBound);
-  inline InputType getLowerBound(std::true_type) const {
+  inline InputType getLowerBound(std::true_type) const
+  {
     return _func.getLowerBound();
   }
-  inline InputType getLowerBound(std::false_type) const {
-    // empty Matrix
-    return InputType();
+  inline InputType getLowerBound(std::false_type) const
+  {
+    InputType x;
+    if (x.size()) x.fill(std::numeric_limits<Scalar>::lowest());
+    return x;
   }
 public:
   virtual InputType getLowerBound() const {
@@ -180,12 +183,15 @@ public:
 
 private:
   CREATE_MEMBER_FUNC_SIG_CHECK(getUpperBound, InputType (T::*)() const, getUpperBound);
-  inline InputType getUpperBound(std::true_type) const {
+  inline InputType getUpperBound(std::true_type) const
+  {
     return _func.getUpperBound();
   }
-  inline InputType getUpperBound(std::false_type) const {
-    // empty Matrix
-    return InputType();
+  inline InputType getUpperBound(std::false_type) const
+  {
+    InputType x;
+    if (x.size()) x.fill(std::numeric_limits<Scalar>::max());
+    return x;
   }
 public:
   virtual InputType getUpperBound() const {
