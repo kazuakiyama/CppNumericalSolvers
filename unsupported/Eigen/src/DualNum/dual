@@ -33,7 +33,7 @@
 //
 //  https://github.com/tesch1/cxxduals
 //
-#ifndef LIB_CXXDUALX
+#ifndef LIB_CXXDUALS
 #define LIB_CXXDUALS 1
 
 #include <cmath>
