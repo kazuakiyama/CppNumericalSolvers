@@ -32,7 +32,8 @@ namespace Eigen {
 template<typename _Scalar>
 struct NumTraits<DualNum<_Scalar> > : GenericNumTraits<_Scalar>
 {
-  typedef DualNum<_Scalar> Real;
+  typedef DualNum<typename NumTraits<_Scalar>::Real> Real;
+  //typedef DualNum<_Scalar> Real;
   //typedef _Scalar Real;
   typedef DualNum<typename NumTraits<_Scalar>::NonInteger> NonInteger;
   typedef DualNum<_Scalar> Nested;
@@ -53,23 +54,17 @@ struct NumTraits<DualNum<_Scalar> > : GenericNumTraits<_Scalar>
   static inline Real dummy_precision()  { return Real(NumTraits<_Scalar>::dummy_precision()); }
 };
 
+template<typename T, typename BinaryOp>
+struct ScalarBinaryOpTraits<T, DualNum<T>, BinaryOp > {
+  typedef DualNum<T> ReturnType;
+};
+
+template<typename T, typename BinaryOp>
+struct ScalarBinaryOpTraits<DualNum<T>, T, BinaryOp> {
+  typedef DualNum<T> ReturnType;
+};
+
 namespace internal {
-
-template<typename T> struct scalar_product_traits<T, DualNum<T> > {
-  enum {
-    Cost = 2*NumTraits<T>::MulCost,
-    Defined = 1
-  };
-  typedef DualNum<T> ReturnType;
-};
-
-template<typename T> struct scalar_product_traits<DualNum<T>, T> {
-  enum {
-    Cost = 2*NumTraits<T>::MulCost,
-    Defined = 1
-  };
-  typedef DualNum<T> ReturnType;
-};
 
 template <typename _Tp>
 struct conj_helper<DualNum<_Tp>, _Tp, false, false>
