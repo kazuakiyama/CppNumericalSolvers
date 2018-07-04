@@ -31,7 +31,7 @@ clean:
 	rm main test $(ASA_VER)/asa_cg.o src/lbfgs.o
 
 # google-testing-framework
-install-gtest:
+libgtest.a:
 	-rm -f googletest-release-$(GTESTVERSION).zip
 	rm -fR googletest-release-$(GTESTVERSION)
 	wget -O googletest-release-$(GTESTVERSION).zip https://github.com/google/googletest/archive/release-$(GTESTVERSION).zip
@@ -45,7 +45,7 @@ install-eigen:
 	-rm eigen-$(EIGENVERSION).tar.bz2
 	wget -c http://bitbucket.org/eigen/eigen/get/$(EIGENVERSION).tar.bz2 -O eigen-$(EIGENVERSION).tar.bz2
 	tar xjvf eigen-$(EIGENVERSION).tar.bz2
-	rm -r Eigen
+	-rm -r Eigen
 	mv eigen-eigen-* Eigen 
 	rm -Rf eigen-$(EIGENVERSION).tar
 	rm -Rf eigen-$(EIGENVERSION).tar.bz2
@@ -56,6 +56,6 @@ install-asa:
 	tar xvf $(ASA_VER).tar.gz
 	rm -Rf $(ASA_VER).tar.gz
 
-install: install-gtest install-eigen install-asa
+install: libgtest.a install-eigen install-asa
 	-ln -s . CppNumericalSolvers
 	echo "installed."
