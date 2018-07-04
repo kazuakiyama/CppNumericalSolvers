@@ -3,12 +3,17 @@ CXX=clang++
 CXX=g++
 CC=gcc
 ASA_VER := ASA_CG-3.0
+GTESTVERSION=1.8.0
+EIGENVERSION=3.2.2
+EIGENVERSION=3.3.4
+INCLUDES=   -I Eigen
 #IPOPT_INCLUDE := -DHAVE_IPOPT -I$(HOME)/local/include/coin
 #IPOPT_LIBS := -L${HOME}/local/lib -lipopt -llapack -lm -lcoinmumps -lpthread -lblas -lcoinhsl -lcoinmetis
-INCLUDE := -I. -I./eigen -I/usr/include/eigen3 -I/opt/local/include/eigen3 -I$(ASA_VER)/ $(IPOPT_INCLUDE)
+INCLUDE := -I. -IEigen -I$(ASA_VER)/ $(IPOPT_INCLUDE)
 CFLAGS := -O3 -g
-CXXFLAGS := -O0 -g -Wall -Wextra -pedantic-errors -std=c++11 $(INCLUDE) #-fopenmp
-CXXFLAGSTEST := -g -Wall -Wextra -pedantic-errors -std=c++11 $(INCLUDE) -Igtest-1.7.0/include #-fopenmp 
+CXXFLAGS := -O0 -g -Wall -Wextra -pedantic-errors -std=c++11 $(INCLUDE)
+CXXFLAGSTEST := -g -Wall -Wextra -pedantic-errors -std=c++11 $(INCLUDE) \
+	-I googletest-release-$(GTESTVERSION)/googletest/include
 DEPS := src/*.h src/*.cpp
 
 .PHONY: main test testdual
@@ -27,22 +32,23 @@ clean:
 
 # google-testing-framework
 install-gtest:
-	rm -f gtest-1.7.0.zip
-	rm -fR gtest-1.7.0
-	wget -O gtest-1.7.0.zip https://googletest.googlecode.com/files/gtest-1.7.0.zip
-	unzip gtest-1.7.0.zip
-	g++ -Igtest-1.7.0/include -Igtest-1.7.0 -c "gtest-1.7.0/src/gtest-all.cc" 
+	-rm -f googletest-release-$(GTESTVERSION).zip
+	rm -fR googletest-release-$(GTESTVERSION)
+	wget -O googletest-release-$(GTESTVERSION).zip https://github.com/google/googletest/archive/release-$(GTESTVERSION).zip
+	unzip googletest-release-$(GTESTVERSION).zip
+	g++ -Igoogletest-release-$(GTESTVERSION)/googletest/include -Igoogletest-release-$(GTESTVERSION)/googletest -c "googletest-release-$(GTESTVERSION)/googletest/src/gtest-all.cc" 
 	ar -rv libgtest.a gtest-all.o
-	rm -f gtest-1.7.0.zip
+	rm -f googletest-release-$(GTESTVERSION).zip
 
 # eigen library
 install-eigen:
-	wget -c http://bitbucket.org/eigen/eigen/get/3.2.2.tar.bz2 -O eigen-3.2.2.tar.bz2
-	bunzip2 eigen-3.2.2.tar.bz2
-	tar xvf eigen-3.2.2.tar
-	mv eigen-eigen-* eigen 
-	rm -Rf eigen-3.2.2.tar
-	rm -Rf eigen-3.2.2.tar.bz2
+	-rm eigen-$(EIGENVERSION).tar.bz2
+	wget -c http://bitbucket.org/eigen/eigen/get/$(EIGENVERSION).tar.bz2 -O eigen-$(EIGENVERSION).tar.bz2
+	tar xjvf eigen-$(EIGENVERSION).tar.bz2
+	rm -r Eigen
+	mv eigen-eigen-* Eigen 
+	rm -Rf eigen-$(EIGENVERSION).tar
+	rm -Rf eigen-$(EIGENVERSION).tar.bz2
 
 # gpl'd ASA_CG code
 install-asa:
@@ -51,5 +57,5 @@ install-asa:
 	rm -Rf $(ASA_VER).tar.gz
 
 install: install-gtest install-eigen install-asa
-	ln -s . CppNumericalSolvers
+	-ln -s . CppNumericalSolvers
 	echo "installed."
