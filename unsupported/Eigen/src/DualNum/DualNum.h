@@ -41,7 +41,7 @@ struct NumTraits<DualNum<_Scalar> > : GenericNumTraits<_Scalar>
   enum {
     IsInteger           =   NumTraits<_Scalar>::IsInteger,
     IsSigned            =   NumTraits<_Scalar>::IsSigned,
-    IsComplex           =   NumTraits<_Scalar>::IsComplex,
+    IsComplex           =   0, //NumTraits<_Scalar>::IsComplex,
     RequireInitialization = NumTraits<_Scalar>::RequireInitialization,
     ReadCost            = 2 * NumTraits<_Scalar>::ReadCost,
     AddCost             = 2 * NumTraits<_Scalar>::AddCost,

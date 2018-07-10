@@ -166,10 +166,29 @@ struct numeric_limits<cxxduals::dual<_Tp> > : public numeric_limits<_Tp> {
   static CXXDUALS_CONSTEXPR T denorm_min()    { return T(numeric_limits<_Tp>::denorm_min()); }
 };
 // TODO: cv-specializations (C++11 18.3.2.3/2)
+
+//! common_type specializations for dual
+#if 0
+template <typename _Tp, typename _Up>
+struct common_type<cxxduals::dual<_Tp>, _Up > : public std::common_type<_Tp,_Up>::type {
+  typedef cxxduals::dual<typename std::common_type<_Tp, _Up>::type> type;
+};
+template <typename _Tp, typename _Up>
+struct common_type<_Tp, cxxduals::dual<_Up> > : public std::common_type<_Tp,_Up>::type {
+  typedef cxxduals::dual<typename std::common_type<_Tp, _Up>::type> type;
+};
+#endif
+
 } // std
 #endif // CXXDUALS_NO_LIMITS
 
 namespace cxxduals {
+
+/// check if something is complex
+template <class T>
+struct is_complex : std::false_type {};
+template <class T>
+struct is_complex<std::complex<T>> : std::true_type {};
 
 /// Useful type trait extraction for templpated types
 template <typename _Tp>
@@ -221,6 +240,9 @@ template <> struct nocx_filter<float> { typedef int test; };
 template <> struct nocx_filter<double> { typedef int test; };
 template <> struct nocx_filter<long double> { typedef int test; };
 
+template< bool B, class T = void >
+using enable_if_t = typename std::enable_if<B,T>::type;
+
 /// filter to only allow basic types in templated constructor
 template <typename _Tp> struct arg_filter;
 template <> struct arg_filter<int> { typedef int test; };
@@ -229,16 +251,9 @@ template <> struct arg_filter<double> { typedef int test; };
 template <> struct arg_filter<long double> { typedef int test; };
 
 /// what results from binary ops of these types
-template <typename _Tp, typename _Up> struct common_type;
-template <typename _Tp, typename _Up> struct common_type<dual<_Tp>, dual<_Up> > {
-  typedef dual<typename std::common_type<_Tp, _Up>::type> type;
-};
-template <typename _Tp, typename _Up> struct common_type<dual<_Tp>, _Up> {
-  typedef dual<typename std::common_type<_Tp, _Up>::type> type;
-};
-template <typename _Tp, typename _Up> struct common_type<_Tp, dual<_Up> > {
-  typedef dual<typename std::common_type<_Tp, _Up>::type> type;
-};
+//template <typename _Tp, typename _Up> struct common_type : public std::common_type<_Tp,_Up> {};
+//template <typename _Tp, typename _Up>
+//using common_type = std::common_type<_Tp,_Up>;
 template <typename _Tp> struct is_arithmetic : public std::is_arithmetic<_Tp> {
   typedef typename std::is_arithmetic<_Tp>::type type;
 };
@@ -537,6 +552,23 @@ public:
     return *this;
   }
 
+  /// multiplication
+  /**
+   * \f[
+   * (a + b \epsilon) * c
+   * \f]
+   */
+  template<typename _Up,
+           typename std::enable_if<is_complex<_Up>::value>::type >
+  DUAL_DEVICE_FUNC
+  dual<_Tp> &
+  operator*=(const typename _Up::value_type & rhs)
+  {
+    _f0 *= rhs;
+    _f1 *= rhs;
+    return *this;
+  }
+
   /**
    * \f[
    * (a + b \epsilon) * (c + d \epsilon)
@@ -588,19 +620,10 @@ public:
 #else
     typedef _Tp higher_t;
 #endif
-#if 0
-    higher_t deriv;
-    deriv = higher_t(-1) * std::pow(higher_t(rhs.rpart()), higher_t(-2));
-    dual<higher_t> inv;
-    inv.rpart() = higher_t(1) / rhs.rpart();
-    inv.epart() = rhs.epart() * deriv;
-    *this *= inv;
-#else
     dual<higher_t> tmp;
     tmp.rpart() = _f0 / rhs.rpart();
     tmp.epart() = (_f1 * rhs.rpart() - _f0 * rhs.epart()) / (rhs.rpart() * rhs.rpart());
     *this = tmp;
-#endif
     return *this;
   }
 
@@ -650,12 +673,30 @@ epart(const dual<_Tp> & d)
 
 // basic ops
 #define DUALH_DEFINE_BASIC_OP_TEMPLATES(OP)                     \
-  template <typename _Tp, typename _Up>                         \
+  template <typename _Tp>                                       \
   DUAL_DEVICE_FUNC                                              \
-  inline typename internal::common_type<_Tp,_Up>::type          \
-  operator OP (const _Tp & lhs, const _Up & rhs)                \
+  inline dual<_Tp>                                              \
+  operator OP (const dual<_Tp> & lhs, const dual<_Tp> & rhs)    \
   {                                                             \
-    typename internal::common_type<_Tp, _Up>::type d = lhs;     \
+    dual<_Tp> d = lhs;                                          \
+    d OP##= rhs;                                                \
+    return d;                                                   \
+  }                                                             \
+  template <typename _Tp>                                       \
+  DUAL_DEVICE_FUNC                                              \
+  inline dual<_Tp>                                              \
+  operator OP (const dual<_Tp> & lhs, const _Tp & rhs)          \
+  {                                                             \
+    dual<_Tp> d = lhs;                                          \
+    d OP##= rhs;                                                \
+    return d;                                                   \
+  }                                                             \
+  template <typename _Tp>                                       \
+  DUAL_DEVICE_FUNC                                              \
+  inline dual<_Tp>                                              \
+  operator OP (const _Tp & lhs, const dual<_Tp> & rhs)          \
+  {                                                             \
+    dual<_Tp> d = lhs;                                          \
     d OP##= rhs;                                                \
     return d;                                                   \
   }
@@ -704,7 +745,7 @@ DUALH_DEFINE_BASIC_OP_TEMPLATES(/)
  * \f]
  */
 template <typename _Tp, typename _Up,
-          typename std::enable_if<internal::is_arithmetic<_Up>{}, int>::type = 0 >
+          typename std::enable_if<internal::is_arithmetic<_Up>{}, int>::type = 0>
 DUAL_DEVICE_FUNC
 dual<_Tp>
 pow(const dual<_Tp> & xx, const _Up & cc)
@@ -772,14 +813,14 @@ pow(const _Tp & aa, const dual<_Up> & yy)
  * pow(a + b \epsilon, c + d \epsilon) = a^c + (b c a^{c-1} + d \log(a) a^c)\epsilon
  * \f]
  */
-template <typename _Tp, typename _Up>
+template <typename _Tp>
 DUAL_DEVICE_FUNC
-typename internal::common_type<dual<_Tp>, dual<_Up> >::type
-pow(const dual<_Tp> & xx, const dual<_Up> & yy)
+dual<_Tp>
+pow(const dual<_Tp> & xx, const dual<_Tp> & yy)
 {
   DUAL_STD_MATH(pow);
   DUAL_STD_MATH(log);
-  typename internal::common_type<dual<_Tp>, dual<_Up> >::type temp;
+  dual<_Tp> temp;
   temp.rpart() = pow(xx.rpart(), yy.rpart());
   temp.epart() =
     xx.epart() * yy.rpart() * pow(xx.rpart(), yy.rpart() - _Tp(1)) +
