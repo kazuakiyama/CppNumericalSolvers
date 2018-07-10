@@ -41,7 +41,7 @@ struct NumTraits<DualNum<_Scalar> > : GenericNumTraits<_Scalar>
   enum {
     IsInteger           =   NumTraits<_Scalar>::IsInteger,
     IsSigned            =   NumTraits<_Scalar>::IsSigned,
-    IsComplex           =   0, //NumTraits<_Scalar>::IsComplex,
+    IsComplex           =   NumTraits<_Scalar>::IsComplex,
     RequireInitialization = NumTraits<_Scalar>::RequireInitialization,
     ReadCost            = 2 * NumTraits<_Scalar>::ReadCost,
     AddCost             = 2 * NumTraits<_Scalar>::AddCost,
@@ -58,7 +58,15 @@ template<typename T, typename BinaryOp>
 struct ScalarBinaryOpTraits<T, DualNum<T>, BinaryOp > {
   typedef DualNum<T> ReturnType;
 };
+template<typename T, typename BinaryOp>
+struct ScalarBinaryOpTraits<T, DualNum<std::complex<T> >, BinaryOp > {
+  typedef DualNum<std::complex<T> > ReturnType;
+};
 
+template<typename T, typename BinaryOp>
+struct ScalarBinaryOpTraits<DualNum<std::complex<T> >, T, BinaryOp> {
+  typedef DualNum<std::complex<T> > ReturnType;
+};
 template<typename T, typename BinaryOp>
 struct ScalarBinaryOpTraits<DualNum<T>, T, BinaryOp> {
   typedef DualNum<T> ReturnType;
