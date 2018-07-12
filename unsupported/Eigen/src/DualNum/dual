@@ -29,7 +29,7 @@
 // which this file is based.
 //
 // The cxxdual package is available on github, bug reports and feature
-// additions welcome.
+// additions are welcome.
 //
 //  https://github.com/tesch1/cxxduals
 //
@@ -855,7 +855,7 @@ pow(const dual<_Tp> & xx, const _Up & cc)
 #if 1
 /**
  * \f[
- * pow(a, c + d \epsilon) = a^c + d * a ^ c * \log(a) \epsilon
+ * a ^ {c + d \epsilon} = a^c + d * a ^ c * \log(a) \epsilon
  * \f]
  *
  * by the function derivative argument:
@@ -885,7 +885,18 @@ pow(const _Tp & aa, const dual<_Up> & yy)
 
 /**
  * \f[
- * pow(a + b \epsilon, c + d \epsilon) = a^c + (b c a^{c-1} + d \log(a) a^c)\epsilon
+ * (a + b \epsilon)^{(c + d \epsilon)} = a^c + (b c a^{c-1} + d \log(a) a^c)\epsilon
+ * \f]
+ *
+ * by the function derivative argument:
+ * 
+ * \f[
+ * f(x,y) = x ^ y \\
+ * f'(x,y) = 
+ * x = a + b \epsilon \\
+ * y = c + d \epsilon \\
+ * f(x,y) = \\
+ *
  * \f]
  */
 template <typename _Tp>
@@ -915,9 +926,8 @@ dual<_Tp>
 exp(const dual<_Tp> & x)
 {
   DUAL_STD_MATH(exp);
-  _Tp deriv;
-  deriv = exp(x.rpart()) * x.epart();
-  return dual<_Tp>(exp(x.rpart()), deriv);
+  return dual<_Tp>(exp(x.rpart()),
+                   exp(x.rpart()) * x.epart());
 }
 
 /**
@@ -1000,7 +1010,7 @@ tan(dual<_Tp> x)
 
 /**
  * \f[
- * \asin(a + b \epsilon) =
+ * \mathrm{asin}(a + b \epsilon) =
  * \f]
  */
 template <typename _Tp>
@@ -1023,7 +1033,7 @@ asin(dual<_Tp> x)
 #if 0
 /**
  * \f[
- * \acos(a + b \epsilon) =
+ * \mathrm{acos}(a + b \epsilon) =
  * \f]
  */
 template <typename _Tp>
@@ -1046,7 +1056,7 @@ acos(dual<_Tp> x)
 
 /**
  * \f[
- * \atan(a + b \epsilon) =
+ * \mathrm{atan}(a + b \epsilon) =
  * \f]
  */
 template <typename _Tp>
@@ -1067,7 +1077,7 @@ atan(dual<_Tp> x)
 
 /**
  * \f[
- * \atan2(a + b \epsilon, c + d \epsilon) =
+ * \mathrm{atan2}(a + b \epsilon, c + d \epsilon) =
  * \f]
  */
 template <typename _Tp>
@@ -1180,7 +1190,6 @@ min(_Tp x1, dual<_Tp> x2)
   return x1 <= x2.rpart() ? dual<_Tp>(x1) : x2;
 }
 
-#if 0
 /**
  * \f[
  *      
@@ -1191,13 +1200,12 @@ DUAL_DEVICE_FUNC
 dual<_Tp>
 conj(const dual<_Tp> & x)
 {
-  // there no derivative of conjugate()
+  // there is actually no derivative of conjugate()
   DUAL_STD_MATH(conj);
   // nonsense:
   return dual<_Tp>(conj(x.rpart()),
                    conj(x.epart()));
 }
-#endif
 
 /**
  * \f[
@@ -1241,7 +1249,7 @@ imag(const dual<_Tp> & x)
  * by the xfunction derivative argument: (for real-valued functions)
  * 
  * \f[
- * f(x) = \sqrt{(x^2 + \imag(x)^2)} \\
+ * f(x) = \sqrt{(x^2 + \mathrm{imag}(x)^2)} \\
  * f'(x) = \frac{x}{|x|} f'(x) \\
  * x = a + b \epsilon \\
  * f(a + b \epsilon) = f(a) + b f'(a) \epsilon \\
