@@ -28,7 +28,7 @@
 #include <Eigen/Dense>
 #include <Eigen/Core>
 #include <stdexcept>
-#include <unsupported/Eigen/DualNum>
+#include "cxxduals/dual"
 
 //#define USE_COMPLEX_DUAL
 
@@ -79,7 +79,7 @@ public:
 #ifdef USE_COMPLEX_DUAL
   typedef std::complex<Scalar> DualScalar;
 #else
-  typedef Eigen::DualNum<Scalar> DualScalar;
+  typedef cxxduals::dual<Scalar> DualScalar;
 #endif
   typedef typename Func::InputType InputType;
   typedef Eigen::Matrix<DualScalar,InputDim,1> DualInputType;
