@@ -13,6 +13,7 @@
 
 #include <matio.h>
 #include <sstream>
+#include <complex>
 
 #ifndef MATIO_VERSION
 #define MATIO_VERSION (MATIO_MAJOR_VERSION * 100 + MATIO_MINOR_VERSION * 10 + MATIO_RELEASE_LEVEL)
