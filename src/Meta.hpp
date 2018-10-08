@@ -30,8 +30,6 @@
 #include <stdexcept>
 #include "cxxduals/dual"
 
-//#define USE_COMPLEX_DUAL
-
 namespace pwie
 {
 
@@ -76,11 +74,7 @@ public:
     ValueDim = Func::ValuesAtCompileTime
   };
   typedef typename Func::Scalar Scalar;
-#ifdef USE_COMPLEX_DUAL
-  typedef std::complex<Scalar> DualScalar;
-#else
   typedef cxxduals::dual<Scalar> DualScalar;
-#endif
   typedef typename Func::InputType InputType;
   typedef Eigen::Matrix<DualScalar,InputDim,1> DualInputType;
   typedef typename Func::JacobianType JacobianType;
@@ -252,23 +246,14 @@ public:
 
   // calculate the gradient/jacobian using dual numbers
   void gradientDual(const InputType & x, JacobianType & grad) const {
-#ifdef USE_COMPLEX_DUAL
-    DualScalar eps(0, sqrt(std::numeric_limits<Scalar>::epsilon()));
-    //std::cerr << "gDU, eps=" << eps << "\n";
-#else
     DualScalar eps(0, 1.0);
     //std::cerr << "gDU, eps=" << eps << "\n";
-#endif
     const size_t DIM = x.rows();
     JacobianType gg(DIM);
     DualInputType xx = x.template cast<DualScalar>();
     for (size_t i = 0; i < DIM; i++) {
       xx[i] += eps;
-#ifdef USE_COMPLEX_DUAL
-      gg[i] = imag(_func.f(xx)) / imag(eps);
-#else
       gg[i] = _func.f(xx).epart();
-#endif
       xx[i] = x[i];
     }
     grad = gg;

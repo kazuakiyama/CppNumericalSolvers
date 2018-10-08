@@ -106,6 +106,7 @@ ISolver<Func>::linesearch(const InputType & xp, const JacobianType & direction)
   JacobianType g(xp.rows());
   int status = LineSearch(x, direction, f, g, step);
   if (status == LBFGSERR_ROUNDING_ERROR) {
+    // this might indicate convergence at a/the function minimum
     std::cerr << "_linesearch min: " << step << " f=" << f << " fallback\n";
     return linesearch2(xp, direction);
   }
@@ -159,7 +160,7 @@ ISolver<Func>::linesearch2(const InputType & x, const JacobianType & direction)
   t /= alpha;
 
   if (f >= f0)
-    std::cout << "WARNING, ascent: f=" << f << " f0=" << f0 << " f-f0=" << f-f0 << "\n";
+    std::cout << "WARNING, ascent: f=" << f << " f0=" << f0 << " f-f0=" << f-f0 << ", t=" << t << "\n";
 
   return t;
 }
